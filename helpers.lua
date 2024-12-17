@@ -246,8 +246,8 @@ NS.DisplayBracketData = function()
 
       -- Format strings for display
       local soloLabel = PVP_RATING
-      local preMatchValue = gameInfo[#gameInfo].rating - gameInfo[#gameInfo].ratingChange
-      local postMathValue = gameInfo[#gameInfo].rating
+      local preMatchValue = gameInfo[#gameInfo].rating
+      local postMathValue = gameInfo[#gameInfo].rating + gameInfo[#gameInfo].ratingChange
       local valueChange = gameInfo[#gameInfo].ratingChange
       if bracket == 6 and NS.db.global.showShuffleRating == false then
         soloLabel = "MMR:"
@@ -325,8 +325,8 @@ NS.UpdateTable = function()
   local rows = {}
   for _, _gameInfo in ipairs(allGames) do
     local _bracket = tonumber(_gameInfo.bracket)
-    local _preMatchValue = _gameInfo.rating - _gameInfo.ratingChange
-    local _postMathValue = _gameInfo.rating
+    local _preMatchValue = _gameInfo.rating
+    local _postMathValue = _gameInfo.rating + _gameInfo.ratingChange
     local _valueChange = _gameInfo.ratingChange
     if _bracket == 6 and NS.db.global.showShuffleRating == false then
       _preMatchValue = _gameInfo.preMatchMMR

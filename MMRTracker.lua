@@ -8,7 +8,6 @@ local UnitFullName = UnitFullName
 local SetBattlefieldScoreFaction = SetBattlefieldScoreFaction
 local GetBattlefieldTeamInfo = GetBattlefieldTeamInfo
 local tostring = tostring
-local type = type
 local GetServerTime = GetServerTime
 local next = next
 local GetSpecialization = GetSpecialization
@@ -31,17 +30,21 @@ local GetGameAccountInfoByGUID = C_BattleNet.GetGameAccountInfoByGUID
 local GetCurrentCalendarTime = C_DateAndTime.GetCurrentCalendarTime
 local GetServerTimeLocal = C_DateAndTime.GetServerTimeLocal
 
-local LDB = LibStub("LibDataBroker-1.1")
-NS.LDB = LDB
-NS.LDB.Config = LDB:NewDataObject(AddonName, {
+local AceGUI = LibStub("AceGUI-3.0")
+local AceConfig = LibStub("AceConfig-3.0")
+local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local LibDataBroker = LibStub("LibDataBroker-1.1")
+local LibDBIcon = LibStub("LibDBIcon-1.0")
+local ScrollingTable = LibStub("ScrollingTable")
+
+NS.LDB = LibDataBroker
+NS.LDB.Config = LibDataBroker:NewDataObject(AddonName, {
   type = "data source",
   text = AddonName,
   icon = "Interface\\PvPRankBadges\\PvPRank12", -- "Interface\\Icons\\UI_RankedPvP_07_Small",
 })
-NS.LDB.Icon = LibStub("LibDBIcon-1.0")
+NS.LDB.Icon = LibDBIcon
 
-local ScrollingTable = LibStub("ScrollingTable")
-local AceGUI = LibStub("AceGUI-3.0")
 local MMRTrackerGUI = AceGUI:Create("Frame")
 MMRTrackerGUI:SetLayout("Fill")
 MMRTrackerGUI:SetWidth(750)
@@ -298,35 +301,26 @@ function NS.TrackMMR()
         stats = gameInfo.stats,
       }
 
-      local playerTableIsTable = type(NS.db.data[NS.playerInfo.region][NS.playerInfo.name]) == "table"
-      local bracketTableIsTable = type(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey]) == "table"
-      local specTableIsTable = type(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec])
-        == "table"
-      if playerTableIsTable and bracketTableIsTable then
-        if gameInfo.bracket == 6 or gameInfo.bracket == 8 then
-          if specTableIsTable then
-            tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec], gameTable)
-          end
-        else
-          tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey], gameTable)
-        end
+      if gameInfo.bracket == 6 or gameInfo.bracket == 8 then
+        tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec], gameTable)
+      else
+        tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey], gameTable)
       end
 
-      if playerTableIsTable then
-        NS.db.data[NS.playerInfo.region][NS.playerInfo.name].lastGame = gameTable
-        MMRTrackerFrame.lastGame = gameTable
-      end
+      NS.db.data[NS.playerInfo.region][NS.playerInfo.name].lastGame = gameTable
+      MMRTrackerFrame.lastGame = gameTable
 
       local soloLabel = PVP_RATING
-      local preMatchValue = gameInfo.rating - gameInfo.ratingChange
-      local postMathValue = gameInfo.rating
+      local preMatchValue = gameInfo.rating
+      local postMathValue = gameInfo.rating + gameInfo.ratingChange
       local valueChange = gameInfo.ratingChange
       if gameInfo.bracket == 6 and NS.db.global.showShuffleRating == false then
         soloLabel = "MMR:"
         preMatchValue = gameInfo.preMatchMMR
         postMathValue = gameInfo.postMatchMMR
         valueChange = gameInfo.mmrChange
-      elseif gameInfo.bracket == 8 and NS.db.global.showBlitzRating == false then
+      end
+      if gameInfo.bracket == 8 and NS.db.global.showBlitzRating == false then
         soloLabel = "MMR:"
         preMatchValue = gameInfo.preMatchMMR
         postMathValue = gameInfo.postMatchMMR
@@ -623,10 +617,10 @@ function NS.LDB.Config:OnClick(button)
       MMRTrackerGUI:Hide()
     end
   elseif button == "RightButton" then
-    if not LibStub("AceConfigDialog-3.0").OpenFrames[AddonName] then
-      LibStub("AceConfigDialog-3.0"):Open(AddonName)
+    if not AceConfigDialog.OpenFrames[AddonName] then
+      AceConfigDialog:Open(AddonName)
     else
-      LibStub("AceConfigDialog-3.0"):Close(AddonName)
+      AceConfigDialog:Close(AddonName)
     end
   end
 end
@@ -639,20 +633,20 @@ function NS.Options_SlashCommands(message)
       MMRTrackerGUI:Hide()
     end
   else
-    if not LibStub("AceConfigDialog-3.0").OpenFrames[AddonName] then
-      LibStub("AceConfigDialog-3.0"):Open(AddonName)
+    if not AceConfigDialog.OpenFrames[AddonName] then
+      AceConfigDialog:Open(AddonName)
     else
-      LibStub("AceConfigDialog-3.0"):Close(AddonName)
+      AceConfigDialog:Close(AddonName)
     end
   end
 end
 
 function NS.Options_Setup()
-  LibStub("AceConfig-3.0"):RegisterOptionsTable(AddonName, NS.AceConfig)
-  LibStub("AceConfigDialog-3.0"):AddToBlizOptions(AddonName, AddonName)
+  AceConfig:RegisterOptionsTable(AddonName, NS.AceConfig)
+  AceConfigDialog:AddToBlizOptions(AddonName, AddonName)
   NS.LDB.Icon:Register(AddonName, NS.LDB.Config, NS.db.minimap)
 
-  SLASH_MMRT1 = AddonName
+  SLASH_MMRT1 = "/mmrtracker"
   SLASH_MMRT2 = "/mmrt"
 
   function SlashCmdList.MMRT(message)
