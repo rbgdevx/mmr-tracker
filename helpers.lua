@@ -20,7 +20,7 @@ local slower = string.lower
 
 local CompareCalendarTime = C_DateAndTime.CompareCalendarTime
 
-local LSM = LibStub("LibSharedMedia-3.0")
+local SharedMedia = LibStub("LibSharedMedia-3.0")
 local ScrollingTable = LibStub("ScrollingTable")
 
 NS.UpdateSize = function(frame, text)
@@ -29,7 +29,7 @@ NS.UpdateSize = function(frame, text)
 end
 
 NS.UpdateFont = function(frame)
-  frame:SetFont(LSM:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
+  frame:SetFont(SharedMedia:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
 end
 
 NS.SetTextFrameSize = function(frame, _lines)

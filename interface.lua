@@ -4,7 +4,8 @@ local CreateFrame = CreateFrame
 local LibStub = LibStub
 local pairs = pairs
 
-local LSM = LibStub("LibSharedMedia-3.0")
+local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local SharedMedia = LibStub("LibSharedMedia-3.0")
 
 local Interface = {}
 NS.Interface = Interface
@@ -18,20 +19,23 @@ NS.lines = lines
 
 local sformat = string.format
 
-function Interface:StopMovement(frame)
+function Interface:MakeUnmovable(frame)
   frame:SetMovable(false)
+  frame:RegisterForDrag()
+  frame:SetScript("OnDragStart", nil)
+  frame:SetScript("OnDragStop", nil)
 end
 
 function Interface:MakeMoveable(frame)
   frame:SetMovable(true)
   frame:RegisterForDrag("LeftButton")
   frame:SetScript("OnDragStart", function(f)
-    if NS.db.global.lock == false then
+    if NS.db.global.lock == false and frame:IsVisible() and frame:GetAlpha() ~= 0 then
       f:StartMoving()
     end
   end)
   frame:SetScript("OnDragStop", function(f)
-    if NS.db.global.lock == false then
+    if NS.db.global.lock == false and frame:IsVisible() and frame:GetAlpha() ~= 0 then
       f:StopMovingOrSizing()
       local a, _, b, c, d = f:GetPoint()
       NS.db.global.position[1] = a
@@ -42,29 +46,30 @@ function Interface:MakeMoveable(frame)
   end)
 end
 
-function Interface:Lock(frame)
-  self:StopMovement(frame)
-end
-
-function Interface:Unlock(frame)
-  self:MakeMoveable(frame)
+function Interface:RemoveControls(frame)
+  frame:EnableMouse(false)
+  frame:SetScript("OnMouseUp", nil)
 end
 
 function Interface:AddControls(frame)
   frame:EnableMouse(true)
   frame:SetScript("OnMouseUp", function(_, btn)
-    if NS.db.global.lock == false then
+    if NS.db.global.lock == false and not IsInInstance() and frame:IsVisible() and frame:GetAlpha() ~= 0 then
       if btn == "RightButton" then
-        LibStub("AceConfigDialog-3.0"):Open(AddonName)
+        AceConfigDialog:Open(AddonName)
       end
     end
   end)
+end
 
-  if NS.db.global.lock then
-    self:StopMovement(frame)
-  else
-    self:MakeMoveable(frame)
-  end
+function Interface:Lock(frame)
+  self:RemoveControls(frame)
+  self:MakeUnmovable(frame)
+end
+
+function Interface:Unlock(frame)
+  self:AddControls(frame)
+  self:MakeMoveable(frame)
 end
 
 function Interface:CreateInterface()
@@ -120,7 +125,7 @@ function Interface:AddText(frame, text, key, bracket, hasData)
     Text:SetJustifyH("CENTER")
     Text:SetJustifyV("MIDDLE")
     Text:SetTextColor(NS.db.global.color.r, NS.db.global.color.g, NS.db.global.color.b, NS.db.global.color.a)
-    Text:SetFont(LSM:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
+    Text:SetFont(SharedMedia:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
     lines[key] = Text
   end
 
@@ -128,7 +133,7 @@ function Interface:AddText(frame, text, key, bracket, hasData)
 
   -- Update the text color and font
   matchingText:SetTextColor(NS.db.global.color.r, NS.db.global.color.g, NS.db.global.color.b, NS.db.global.color.a)
-  matchingText:SetFont(LSM:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
+  matchingText:SetFont(SharedMedia:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
 
   -- Set visibility and alpha based on bracket type
   if hasData then
@@ -199,8 +204,14 @@ function Interface:AddText(frame, text, key, bracket, hasData)
 
   -- Adjust the frame size and controls
   NS.SetTextFrameSize(frame, lines)
-  Interface:AddControls(frame.textFrame)
+
   Interface.textFrame = frame.textFrame
+
+  if NS.db.global.lock then
+    self:Lock(Interface.textFrame)
+  else
+    self:Unlock(Interface.textFrame)
+  end
 
   NS.lines = lines
 end

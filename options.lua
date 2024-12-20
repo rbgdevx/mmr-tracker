@@ -1,6 +1,9 @@
 local AddonName, NS = ...
 
 local CopyTable = CopyTable
+local LibStub = LibStub
+
+local SharedMedia = LibStub("LibSharedMedia-3.0")
 
 NS.AceConfig = {
   name = AddonName,
@@ -234,8 +237,8 @@ NS.AceConfig = {
           type = "range",
           width = "double",
           order = 7,
-          min = 8,
-          max = 120,
+          min = 2,
+          max = 64,
           step = 1,
           set = function(_, val)
             NS.db.global.fontSize = val
@@ -251,7 +254,7 @@ NS.AceConfig = {
           width = "double",
           order = 8,
           dialogControl = "LSM30_Font",
-          values = AceGUIWidgetLSMlists.font,
+          values = SharedMedia:HashTable("font"),
           set = function(_, val)
             NS.db.global.fontFamily = val
             NS.OnDbChanged()
