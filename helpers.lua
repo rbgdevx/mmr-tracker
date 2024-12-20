@@ -312,7 +312,12 @@ NS.DisplayBracketData = function()
 
   NS.Interface:UpdateAnchors(NS.Interface, NS.lines)
   NS.SetTextFrameSize(NS.Interface, NS.lines)
-  NS.Interface:AddControls(NS.Interface.textFrame)
+
+  if NS.db.global.lock then
+    NS.Interface:Lock(NS.Interface.textFrame)
+  else
+    NS.Interface:Unlock(NS.Interface.textFrame)
+  end
 end
 
 NS.UpdateTable = function()

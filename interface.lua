@@ -3,6 +3,9 @@ local AddonName, NS = ...
 local CreateFrame = CreateFrame
 local LibStub = LibStub
 local pairs = pairs
+local IsInInstance = IsInInstance
+
+local sformat = string.format
 
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local SharedMedia = LibStub("LibSharedMedia-3.0")
@@ -16,8 +19,6 @@ NS.Interface.frame = InterfaceFrame
 
 local lines = {}
 NS.lines = lines
-
-local sformat = string.format
 
 function Interface:MakeUnmovable(frame)
   frame:SetMovable(false)
