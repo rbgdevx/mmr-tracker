@@ -160,22 +160,20 @@ NS.FlattenAllGames = function(playerInfo)
           if playerName == playerInfo.name then
             -- Iterate over brackets
             for bracket, bracketData in pairs(playerData) do
-              if tonumber(bracket) then
-                -- Handle brackets with specs (e.g., '6' and '8')
-                if bracket == "6" or bracket == "8" then
-                  -- spec, games
-                  for _, games in pairs(bracketData) do
-                    -- index, gameInfo
-                    for _, game in ipairs(games) do
-                      tinsert(allGames, game)
-                    end
-                  end
-                else
-                  -- Handle brackets without specs (e.g., '0', '1', '3')
+              -- Handle brackets with specs (e.g., '6' and '8')
+              if bracket == "6" or bracket == "8" then
+                -- spec, games
+                for spec, games in pairs(bracketData) do
                   -- index, gameInfo
-                  for _, game in ipairs(bracketData) do
+                  for index, game in ipairs(games) do
                     tinsert(allGames, game)
                   end
+                end
+              else
+                -- Handle brackets without specs (e.g., '0', '1', '3')
+                -- index, gameInfo
+                for _, game in ipairs(bracketData) do
+                  tinsert(allGames, game)
                 end
               end
             end
@@ -266,7 +264,8 @@ NS.DisplayBracketData = function()
       local positiveChange = valueChange > 0
       local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
       local colorString = valueChange == 0 and "" or (positiveChange and "|cFF00FF00" or "|cFFFF0000")
-      local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")") or ""
+      local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")" .. "|r")
+        or ""
 
       -- Add the formatted data
       local displayString = bracketString .. valueString .. changeString
@@ -328,55 +327,56 @@ NS.UpdateTable = function()
   -- end
 
   local rows = {}
-  for _, _gameInfo in ipairs(allGames) do
-    local _bracket = tonumber(_gameInfo.bracket)
-    local _preMatchValue = _gameInfo.rating
-    local _postMathValue = _gameInfo.rating + _gameInfo.ratingChange
-    local _valueChange = _gameInfo.ratingChange
-    if _bracket == 6 and NS.db.global.showShuffleRating == false then
-      _preMatchValue = _gameInfo.preMatchMMR
-      _postMathValue = _gameInfo.postMatchMMR
-      _valueChange = _gameInfo.mmrChange
-    elseif _bracket == 8 and NS.db.global.showBlitzRating == false then
-      _preMatchValue = _gameInfo.preMatchMMR
-      _postMathValue = _gameInfo.postMatchMMR
-      _valueChange = _gameInfo.mmrChange
+  for _, gameInfo in pairs(allGames) do
+    local bracket = tonumber(gameInfo.bracket)
+    local preMatchValue = gameInfo.rating
+    local postMathValue = gameInfo.rating + gameInfo.ratingChange
+    local valueChange = gameInfo.ratingChange
+    if bracket == 6 and NS.db.global.showShuffleRating == false then
+      preMatchValue = gameInfo.preMatchMMR
+      postMathValue = gameInfo.postMatchMMR
+      valueChange = gameInfo.mmrChange
+    elseif bracket == 8 and NS.db.global.showBlitzRating == false then
+      preMatchValue = gameInfo.preMatchMMR
+      postMathValue = gameInfo.postMatchMMR
+      valueChange = gameInfo.mmrChange
     end
-    local _positiveChange = _valueChange > 0
-    local _colorChangeString = _valueChange == 0 and "|cFFBBBBBB" or (_positiveChange and "|cFF00FF00" or "|cFFFF0000")
-    local _valueDifference = _positiveChange and ("+" .. _valueChange) or _valueChange
-    local _rbgFaction = _bracket == 3 or _bracket == 8
-    local _rbgString = _gameInfo.faction == 0 and ("|cffFF0000" .. FACTION_HORDE) or ("|cff00AAFF" .. FACTION_ALLIANCE)
+    local positiveChange = valueChange > 0
+    local changeColor = valueChange == 0 and "|cFFBBBBBB" or (positiveChange and "|cFF00FF00" or "|cFFFF0000")
+    local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
+    local bgBracket = bracket == 3 or bracket == 8
+    local shuffleBracket = bracket == 6
+    local bgString = gameInfo.faction == 0 and ("|cffFF0000" .. FACTION_HORDE .. "|r")
+      or ("|cff00AAFF" .. FACTION_ALLIANCE .. "|r")
     local GREEN_TEAM = VICTORY_TEXT_ARENA0:match("^(%w+)")
     local GOLD_TEAM = VICTORY_TEXT_ARENA1:match("^(%w+)")
-    local _arenaString = _gameInfo.faction == 0 and ("|cFF90EE90" .. GREEN_TEAM) or ("|cFFCC9900" .. GOLD_TEAM)
-    local _shuffleString = "|cFFBBBBBB" .. "-"
-    local _factionString = _rbgFaction and _rbgString or (_bracket == 6 and _shuffleString or _arenaString)
-    local _classColors = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[_gameInfo.classToken]
+    local arenaString = gameInfo.faction == 0 and ("|cFF90EE90" .. GREEN_TEAM .. "|r")
+      or ("|cFFCC9900" .. GOLD_TEAM .. "|r")
+    local shuffleString = "|cFFBBBBBB" .. "-" .. "|r"
+    local bracketString = bgBracket and bgString or (shuffleBracket and shuffleString or arenaString)
+    local classColors = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[gameInfo.classToken]
     -- "|TInterface\\RaidFrame\\ReadyCheck-Waiting:14:14:0:0|t"
-    local _winIcon = _gameInfo.winner == _gameInfo.faction and "|TInterface\\RaidFrame\\ReadyCheck-Ready:14:14:0:0|t"
+    local winIcon = gameInfo.winner == gameInfo.faction and "|TInterface\\RaidFrame\\ReadyCheck-Ready:14:14:0:0|t"
       or "|TInterface\\RaidFrame\\ReadyCheck-NotReady:14:14:0:0|t"
-    local _roundsWon = _bracket == 6 and _gameInfo.stats["1"].pvpStatValue or 0
-    local _roundsWonColor = _roundsWon == 3 and "|cFFBBBBBB" or (_roundsWon > 3 and "|cFF00FF00" or "|cFFFF0000")
-
-    local _specIcon = NS.GetSpecIcon(_gameInfo.classToken, _gameInfo.spec)
-    local _specInfo = "|c" .. _classColors.colorStr .. _gameInfo.spec
-    if _specIcon and NS.db.global.showSpecIcon then
+    local roundsWon = shuffleBracket and gameInfo.stats[1].pvpStatValue or 0
+    local roundsWonColor = roundsWon == 3 and "|cFFBBBBBB" or (roundsWon > 3 and "|cFF00FF00" or "|cFFFF0000")
+    local specIcon = NS.GetSpecIcon(gameInfo.classToken, gameInfo.spec)
+    local specInfo = "|c" .. classColors.colorStr .. gameInfo.spec .. "|r"
+    if NS.db.global.showSpecIcon and specIcon then
       -- NS.GetClassIcon(_gameInfo.classToken, 20),
-      _specInfo = "|T" .. _specIcon .. ":20:20:0:0|t"
+      specInfo = "|T" .. specIcon .. ":20:20:0:0|t"
     end
-
     tinsert(rows, {
-      _gameInfo.date,
-      _gameInfo.mapName,
-      _specInfo,
-      NS.TRACKED_BRACKETS[_bracket],
-      _factionString,
-      _preMatchValue,
-      _colorChangeString .. _valueDifference,
-      _postMathValue,
-      _gameInfo.winner == nil and "-" or (_bracket == 6 and (_roundsWonColor .. _roundsWon .. "/6") or _winIcon),
-      _gameInfo.time,
+      gameInfo.date,
+      gameInfo.mapName,
+      specInfo,
+      NS.TRACKED_BRACKETS[bracket],
+      bracketString,
+      preMatchValue,
+      changeColor .. valueDifference .. "|r",
+      postMathValue,
+      gameInfo.winner == nil and "-" or (shuffleBracket and (roundsWonColor .. roundsWon .. "/6" .. "|r") or winIcon),
+      gameInfo.time,
     })
   end
 

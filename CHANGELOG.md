@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.0.3](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.0.3) (2024-12-21)
+
+- Fixing table from not showing up when you have solo shuffle games played
+
 ## [v1.0.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.0.2) (2024-12-20)
 
 - Drag and Click control updates to ensure click through when hidden or locked

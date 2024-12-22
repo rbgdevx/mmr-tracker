@@ -332,7 +332,8 @@ function NS.TrackMMR()
       local positiveChange = valueChange > 0
       local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
       local colorString = valueChange == 0 and "" or (positiveChange and "|cFF00FF00" or "|cFFFF0000")
-      local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")") or ""
+      local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")" .. "|r")
+        or ""
       local string = bracketString .. valueString .. changeString
       local str = sformat(string)
       local index = 0
