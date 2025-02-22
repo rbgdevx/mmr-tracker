@@ -474,17 +474,9 @@ local function instanceCheck()
     MMRTrackerFrame.instanceType = instanceType
   end
 
-  if instanceType == "none" then
-    toggleVisibilityInQueue()
-  else
+  if instanceType ~= "none" then
     local name = GetInstanceInfo()
     MMRTrackerFrame.instanceName = name
-
-    if NS.db.global.showInInstances then
-      NS.Interface.textFrame:SetAlpha(1)
-    else
-      NS.Interface.textFrame:SetAlpha(0)
-    end
   end
 end
 
@@ -530,8 +522,6 @@ function MMRTracker:PLAYER_ENTERING_WORLD()
     MMRTrackerFrame.wasInInstance = true
   end
 
-  toggleVisibilityInQueue()
-
   NS.DisplayBracketData()
 
   NS.DataTable.frame:ClearAllPoints()
@@ -539,6 +529,16 @@ function MMRTracker:PLAYER_ENTERING_WORLD()
 
   local rows = NS.UpdateTable()
   NS.DataTable:SetData(rows, true)
+
+  if MMRTrackerFrame.instanceType == "none" then
+    toggleVisibilityInQueue()
+  else
+    if NS.db.global.showInInstances then
+      NS.Interface.textFrame:SetAlpha(1)
+    else
+      NS.Interface.textFrame:SetAlpha(0)
+    end
+  end
 end
 
 function MMRTracker:PLAYER_LOGIN()

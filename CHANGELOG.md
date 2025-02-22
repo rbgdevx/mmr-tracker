@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.0.4](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.0.4) (2025-02-22)
+
+- Ensuring visibility settings in instances work as expected
+
 ## [v1.0.3](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.0.3) (2024-12-21)
 
 - Fixing table from not showing up when you have solo shuffle games played
