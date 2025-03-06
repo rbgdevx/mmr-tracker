@@ -14,7 +14,6 @@ local Interface = {}
 NS.Interface = Interface
 
 local InterfaceFrame = CreateFrame("Frame", AddonName .. "InterfaceFrame")
-InterfaceFrame.hideIntro = false
 NS.Interface.frame = InterfaceFrame
 
 local lines = {}
@@ -154,8 +153,7 @@ function Interface:AddText(frame, text, key, bracket, hasData)
   else
     local hideNoResults = NS.db.global.hideNoResults and 0 or 1
     if bracket == "none" then
-      InterfaceFrame.hideIntro = NS.db.global.hideIntro
-      local hideIntro = InterfaceFrame.hideIntro
+      local hideIntro = NS.db.global.hideIntro
       matchingText:SetAlpha(hideIntro and 0 or 1)
     elseif bracket == "2v2" then
       matchingText:SetAlpha(NS.db.global.show2v2 and hideNoResults or 0)
@@ -180,13 +178,12 @@ function Interface:AddText(frame, text, key, bracket, hasData)
       ButtonFrame:SetHeight(25)
       ButtonFrame:SetScript("OnClick", function()
         NS.db.global.hideIntro = true
-        InterfaceFrame.hideIntro = true
         matchingText:SetAlpha(0)
         ButtonFrame:Hide()
       end)
       Interface.buttonFrame = ButtonFrame
     else
-      if hasData or InterfaceFrame.hideIntro or NS.db.global.hideIntro then
+      if hasData or NS.db.global.hideIntro then
         Interface.buttonFrame:Hide()
       else
         Interface.buttonFrame:Show()

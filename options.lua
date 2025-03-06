@@ -177,7 +177,7 @@ NS.AceConfig = {
           end,
         },
         showOnlyInQueue = {
-          name = "Show only in queue",
+          name = "Show only while in queue",
           desc = "Only show the text when you're in a queue.",
           type = "toggle",
           width = "double",
@@ -191,7 +191,7 @@ NS.AceConfig = {
           end,
         },
         showInInstances = {
-          name = "Show in instances",
+          name = "Show inside games",
           desc = "Show the text while in an instance.",
           type = "toggle",
           width = "double",

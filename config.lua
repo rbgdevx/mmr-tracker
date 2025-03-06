@@ -3,6 +3,7 @@ local _, NS = ...
 local GetNumClasses = GetNumClasses
 local GetClassInfo = GetClassInfo
 local GetSpecializationInfoForClassID = GetSpecializationInfoForClassID
+local GetCurrentArenaSeason = GetCurrentArenaSeason
 
 local GetNumSpecializationsForClassID = C_SpecializationInfo.GetNumSpecializationsForClassID
 
@@ -29,6 +30,10 @@ NS.REGION_NAME = {
 
 NS.Timezone = nil
 
+-- 38 is the first season this addon came out - T.W.W. Season 1
+-- 0 is when there is no active season
+NS.season = GetCurrentArenaSeason and GetCurrentArenaSeason() or 0
+
 NS.CLASS_INFO = {}
 for classID = 1, GetNumClasses() do
   local _, classToken = GetClassInfo(classID)
@@ -50,6 +55,7 @@ for classID = 1, GetNumClasses() do
 end
 
 NS.DefaultDatabase = {
+  migrated = false,
   global = {
     lock = false,
     show2v2 = false,

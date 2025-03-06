@@ -18,6 +18,7 @@ local GetInstanceInfo = GetInstanceInfo
 local GetBattlefieldStatus = GetBattlefieldStatus
 local UnitClass = UnitClass
 local GetBattlefieldWinner = GetBattlefieldWinner
+local GetCurrentArenaSeason = GetCurrentArenaSeason
 
 local tinsert = table.insert
 local sformat = string.format
@@ -53,7 +54,7 @@ MMRTrackerGUI:SetTitle(AddonName)
 MMRTrackerGUI:EnableResize(false)
 MMRTrackerGUI:Hide()
 -- MMRTrackerGUI.statustext:GetParent():Hide()
-MMRTrackerGUI:SetStatusText("Viewing all data for all brackets, for your current character.")
+MMRTrackerGUI:SetStatusText("Viewing all data for all brackets, for your current character, for the current season.")
 
 -- Make sure the window can be closed by pressing the escape button
 _G["MMRTRACKER_DATA_TABLE_WINDOW"] = MMRTrackerGUI.frame
@@ -218,6 +219,7 @@ function NS.TrackMMR()
     ratingChange = 0,
     rating = 0,
     winner = 0,
+    season = GetCurrentArenaSeason(),
     stats = {},
   }
 
@@ -298,6 +300,7 @@ function NS.TrackMMR()
         ratingChange = gameInfo.ratingChange,
         rating = gameInfo.rating,
         winner = gameInfo.winner,
+        season = gameInfo.season,
         stats = gameInfo.stats,
       }
 
@@ -562,6 +565,9 @@ function MMRTracker:PLAYER_LOGIN()
     NS.playerInfo.class = _classFilename
   end
 
+  local _currentSeason = GetCurrentArenaSeason()
+  NS.season = _currentSeason
+
   NS.Interface:CreateInterface()
 
   MMRTrackerFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -663,6 +669,9 @@ function MMRTracker:ADDON_LOADED(addon)
 
     -- Copy any settings from default if they don't exist in current profile
     NS.CopyDefaults(NS.DefaultDatabase, MMRTrackerDB)
+
+    -- Migrate old data with no seasons to now have seasons
+    NS.MigrateDB(MMRTrackerDB)
 
     -- Reference to active db profile
     -- Always use this directly or reference will be invalid

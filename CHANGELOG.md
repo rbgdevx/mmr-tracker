@@ -1,5 +1,13 @@
 # MMR Tracker
 
+## [v1.1.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.0) (2025-03-05)
+
+- Starting to track season for each game so the table view can be filtered by season and default to the current season
+- Resetting hide into text when new seasons begin
+- Fixing bug when there is no shuffle data available
+- Adding data migration for everyone who installed the addon previous to this update to add season info
+- Update toc
+
 ## [v1.0.4](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.0.4) (2025-02-22)
 
 - Ensuring visibility settings in instances work as expected

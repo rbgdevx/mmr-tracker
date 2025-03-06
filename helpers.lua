@@ -117,6 +117,125 @@ local function parseDate(dateString)
   }
 end
 
+local function checkCutOffTime(gameTime, cutOffTime)
+  local isBeforeYear = gameTime.year < cutOffTime.year
+  local isBeforeMonth = gameTime.month < cutOffTime.month
+  local isBeforeDay = gameTime.monthDay < cutOffTime.monthDay
+  local isBeforeHour = gameTime.hour < cutOffTime.hour
+  local isBeforeMinute = gameTime.minute < cutOffTime.minute
+
+  local isSameYear = gameTime.year == cutOffTime.year
+  local isSameMonth = gameTime.month == cutOffTime.month
+  local isSameDay = gameTime.monthDay == cutOffTime.monthDay
+  local isSameHour = gameTime.hour == cutOffTime.hour
+  -- local isSameMinute = gameTime.minute == cutOffTime.minute
+
+  return isBeforeYear
+    or (isSameYear and isBeforeMonth)
+    or (isSameYear and isSameMonth and isBeforeDay)
+    or (isSameYear and isSameMonth and isSameDay and isBeforeHour)
+    or (isSameYear and isSameMonth and isSameDay and isSameHour and isBeforeMinute)
+end
+
+NS.MigrateDB = function(db)
+  if db.migrated ~= nil and db.migrated == true then
+    return
+  end
+
+  local data = db.data
+  -- February 24, 2025, 10:05 PM PST
+  -- this is the end of the first season for the addon
+  local firstSeasonCutOffTime = {
+    ["monthDay"] = 24,
+    ["weekday"] = 2,
+    ["month"] = 2,
+    ["year"] = 2025,
+    ["hour"] = 22,
+    ["minute"] = 5,
+  }
+  -- March 4, 2025, 3:00 PM PST
+  -- this is the end of the first post season for the addon
+  local noSeasonCutOffTime = {
+    ["monthDay"] = 4,
+    ["weekday"] = 3,
+    ["month"] = 3,
+    ["year"] = 2025,
+    ["hour"] = 15,
+    ["minute"] = 0,
+  }
+
+  -- Iterate over regions
+  for region, players in pairs(data) do
+    -- Iterate over player names
+    for player, playerData in pairs(players) do
+      -- Add season to lastGame if it exists and doesn't already have it
+      if playerData.lastGame then
+        if playerData.lastGame.season == nil then
+          if checkCutOffTime(playerData.lastGame.gameTime, firstSeasonCutOffTime) then
+            playerData.lastGame.season = 38
+          elseif checkCutOffTime(playerData.lastGame.gameTime, noSeasonCutOffTime) then
+            playerData.lastGame.season = 0
+          else
+            playerData.lastGame.season = NS.season
+          end
+        end
+      end
+      -- Iterate over brackets
+      for bracket, games in pairs(playerData) do
+        -- Handle brackets with specs (e.g. '6' and '8')
+        if bracket == "8" or bracket == "6" then
+          -- spec, games
+          for spec, specGames in pairs(games) do
+            -- index, gameInfo
+            for _, game in ipairs(specGames) do
+              if game.season == nil then
+                if checkCutOffTime(game.gameTime, firstSeasonCutOffTime) then
+                  game.season = 38
+                elseif checkCutOffTime(game.gameTime, noSeasonCutOffTime) then
+                  game.season = 0
+                else
+                  game.season = NS.season
+                end
+              end
+            end
+          end
+        elseif bracket == "0" or bracket == "1" or bracket == "3" then
+          -- Handle brackets without specs (e.g. '0', '1', '3')
+          -- index, gameInfo
+          for _, game in ipairs(games) do
+            if game.season == nil then
+              if checkCutOffTime(game.gameTime, firstSeasonCutOffTime) then
+                game.season = 38
+              elseif checkCutOffTime(game.gameTime, noSeasonCutOffTime) then
+                game.season = 0
+              else
+                game.season = NS.season
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  -- Replace the old spells table with the updated one
+  db.data = data
+  db.migrated = true
+end
+
+-- Function to filter games by the current season
+NS.filterBySeason = function(data)
+  local filteredGames = {}
+
+  for _, game in ipairs(data) do
+    if game.season == NS.season then
+      tinsert(filteredGames, game)
+    end
+  end
+
+  return filteredGames
+end
+
 NS.sortByDate = function(data)
   -- Sort the data table using the parsed date and time
   table.sort(data, function(a, b)
@@ -169,7 +288,7 @@ NS.FlattenAllGames = function(playerInfo)
                     tinsert(allGames, game)
                   end
                 end
-              else
+              elseif bracket == "0" or bracket == "1" or bracket == "3" then
                 -- Handle brackets without specs (e.g., '0', '1', '3')
                 -- index, gameInfo
                 for _, game in ipairs(bracketData) do
@@ -182,6 +301,9 @@ NS.FlattenAllGames = function(playerInfo)
       end
     end
   end
+
+  -- Filter out games that don't match the current season
+  allGames = NS.filterBySeason(allGames)
 
   -- Sort the data table using the parsed date and time
   NS.sortByDate(allGames)
@@ -210,6 +332,7 @@ NS.DisplayBracketData = function()
   end
 
   local hasAnyBracketData = false
+  local hasAnySeasonData = false
   local playerData = NS.db.data[NS.playerInfo.region][NS.playerInfo.name]
 
   -- Iterate over tracked brackets
@@ -239,37 +362,47 @@ NS.DisplayBracketData = function()
 
     if hasData then
       hasAnyBracketData = true
+
       local gameInfo = (bracket == 6 or bracket == 8) and playerData[bracketKey][NS.playerInfo.spec]
         or playerData[bracketKey]
 
-      -- Format strings for display
-      local soloLabel = PVP_RATING
-      local preMatchValue = gameInfo[#gameInfo].rating
-      local postMathValue = gameInfo[#gameInfo].rating + gameInfo[#gameInfo].ratingChange
-      local valueChange = gameInfo[#gameInfo].ratingChange
-      if bracket == 6 and NS.db.global.showShuffleRating == false then
-        soloLabel = "MMR:"
-        preMatchValue = gameInfo[#gameInfo].preMatchMMR
-        postMathValue = gameInfo[#gameInfo].postMatchMMR
-        valueChange = gameInfo[#gameInfo].mmrChange
-      elseif bracket == 8 and NS.db.global.showBlitzRating == false then
-        soloLabel = "MMR:"
-        preMatchValue = gameInfo[#gameInfo].preMatchMMR
-        postMathValue = gameInfo[#gameInfo].postMatchMMR
-        valueChange = gameInfo[#gameInfo].mmrChange
-      end
-      local bracketString = NS.TRACKED_BRACKETS[bracket] .. " " .. soloLabel .. " "
-      local valueString = NS.db.global.showMMRDifference and (preMatchValue .. " › " .. postMathValue)
-        or postMathValue
-      local positiveChange = valueChange > 0
-      local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
-      local colorString = valueChange == 0 and "" or (positiveChange and "|cFF00FF00" or "|cFFFF0000")
-      local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")" .. "|r")
-        or ""
+      if gameInfo[#gameInfo].season ~= nil and gameInfo[#gameInfo].season == NS.season then
+        hasAnySeasonData = true
 
-      -- Add the formatted data
-      local displayString = bracketString .. valueString .. changeString
-      NS.Interface:AddText(NS.Interface, displayString, index, key, hasData)
+        -- Format strings for display
+        local soloLabel = PVP_RATING
+        local preMatchValue = gameInfo[#gameInfo].rating
+        local postMathValue = gameInfo[#gameInfo].rating + gameInfo[#gameInfo].ratingChange
+        local valueChange = gameInfo[#gameInfo].ratingChange
+        if bracket == 6 and NS.db.global.showShuffleRating == false then
+          soloLabel = "MMR:"
+          preMatchValue = gameInfo[#gameInfo].preMatchMMR
+          postMathValue = gameInfo[#gameInfo].postMatchMMR
+          valueChange = gameInfo[#gameInfo].mmrChange
+        elseif bracket == 8 and NS.db.global.showBlitzRating == false then
+          soloLabel = "MMR:"
+          preMatchValue = gameInfo[#gameInfo].preMatchMMR
+          postMathValue = gameInfo[#gameInfo].postMatchMMR
+          valueChange = gameInfo[#gameInfo].mmrChange
+        end
+        local bracketString = NS.TRACKED_BRACKETS[bracket] .. " " .. soloLabel .. " "
+        local valueString = NS.db.global.showMMRDifference and (preMatchValue .. " › " .. postMathValue)
+          or postMathValue
+        local positiveChange = valueChange > 0
+        local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
+        local colorString = valueChange == 0 and "" or (positiveChange and "|cFF00FF00" or "|cFFFF0000")
+        local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")" .. "|r")
+          or ""
+
+        -- Add the formatted data
+        local displayString = bracketString .. valueString .. changeString
+        NS.Interface:AddText(NS.Interface, displayString, index, key, hasData)
+      else
+        NS.db.global.hideIntro = false
+        -- Display message if no data for this bracket
+        local noDataString = sformat("No %s data yet", NS.TRACKED_BRACKETS[bracket])
+        NS.Interface:AddText(NS.Interface, noDataString, index, key, false)
+      end
     else
       -- Display message if no data for this bracket
       local noDataString = sformat("No %s data yet", NS.TRACKED_BRACKETS[bracket])
@@ -291,7 +424,7 @@ NS.DisplayBracketData = function()
   end
 
   -- Handle the case where no data exists at all
-  if hasAnyBracketData then
+  if hasAnyBracketData and hasAnySeasonData then
     for _, textFrame in pairs(NS.lines) do
       if textFrame.bracket == "none" then
         textFrame:SetAlpha(0)
@@ -302,6 +435,12 @@ NS.DisplayBracketData = function()
     -- local noDataStr = sformat("%s %s, %s", "No data for", NS.playerInfo.name, NS.playerInfo.region)
     local noDataStr = sformat("Play a game to start tracking mmr")
     NS.Interface:AddText(NS.Interface, noDataStr, 0, "none", false)
+
+    for _, textFrame in pairs(NS.lines) do
+      if textFrame.bracket ~= "none" then
+        textFrame:SetAlpha(0)
+      end
+    end
   end
 
   -- Update frame visibility and layout
@@ -358,7 +497,7 @@ NS.UpdateTable = function()
     -- "|TInterface\\RaidFrame\\ReadyCheck-Waiting:14:14:0:0|t"
     local winIcon = gameInfo.winner == gameInfo.faction and "|TInterface\\RaidFrame\\ReadyCheck-Ready:14:14:0:0|t"
       or "|TInterface\\RaidFrame\\ReadyCheck-NotReady:14:14:0:0|t"
-    local roundsWon = shuffleBracket and gameInfo.stats[1].pvpStatValue or 0
+    local roundsWon = (shuffleBracket and next(gameInfo.stats) ~= nil) and gameInfo.stats[1].pvpStatValue or 0
     local roundsWonColor = roundsWon == 3 and "|cFFBBBBBB" or (roundsWon > 3 and "|cFF00FF00" or "|cFFFF0000")
     local specIcon = NS.GetSpecIcon(gameInfo.classToken, gameInfo.spec)
     local specInfo = "|c" .. classColors.colorStr .. gameInfo.spec .. "|r"
