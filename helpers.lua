@@ -367,6 +367,7 @@ NS.DisplayBracketData = function()
         or playerData[bracketKey]
 
       if gameInfo[#gameInfo].season ~= nil and gameInfo[#gameInfo].season == NS.season then
+        NS.db.global.hideIntro = true
         hasAnySeasonData = true
 
         -- Format strings for display
@@ -487,10 +488,11 @@ NS.UpdateTable = function()
     local shuffleBracket = bracket == 6
     local bgString = gameInfo.faction == 0 and ("|cffFF0000" .. FACTION_HORDE .. "|r")
       or ("|cff00AAFF" .. FACTION_ALLIANCE .. "|r")
-    local GREEN_TEAM = VICTORY_TEXT_ARENA0:match("^(%w+)")
-    local GOLD_TEAM = VICTORY_TEXT_ARENA1:match("^(%w+)")
+    local GREEN_TEAM = VICTORY_TEXT_ARENA0:match("^(%S+)") or "Green"
+    local GOLD_TEAM = VICTORY_TEXT_ARENA1:match("^(%S+)") or "Gold"
     local arenaString = gameInfo.faction == 0 and ("|cFF90EE90" .. GREEN_TEAM .. "|r")
       or ("|cFFCC9900" .. GOLD_TEAM .. "|r")
+    -- VICTORY_TEXT_ARENA_WINS
     local shuffleString = "|cFFBBBBBB" .. "-" .. "|r"
     local bracketString = bgBracket and bgString or (shuffleBracket and shuffleString or arenaString)
     local classColors = (CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS)[gameInfo.classToken]
