@@ -1,9 +1,14 @@
 # MMR Tracker
 
+## [v1.1.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.1) (2025-03-10)
+
+- Changing rated arena win team names to fix non-english client name matching and adding fallback just incase
+- Hiding intro text when season data becomes present
+
 ## [v1.1.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.0) (2025-03-05)
 
 - Starting to track season for each game so the table view can be filtered by season and default to the current season
-- Resetting hide into text when new seasons begin
+- Resetting hide intro text when new seasons begin
 - Fixing bug when there is no shuffle data available
 - Adding data migration for everyone who installed the addon previous to this update to add season info
 - Update toc
