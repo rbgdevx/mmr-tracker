@@ -209,7 +209,7 @@ function NS.TrackMMR()
     gameTime = GetCurrentCalendarTime(),
     localTime = GetServerTimeLocal(),
     time = TIME,
-    date = NS.DateClean(TIME),
+    date = NS.DateCleanEU(TIME),
     preMatchMMR = 0,
     mmrChange = 0,
     postMatchMMR = 0,
@@ -448,7 +448,15 @@ local function toggleVisibilityInQueue()
   if status == "queued" then
     MMRTrackerFrame.inQueue = true
 
-    NS.Interface.textFrame:SetAlpha(1)
+    if IsInInstance() then
+      if NS.db.global.showInInstances then
+        NS.Interface.textFrame:SetAlpha(1)
+      else
+        NS.Interface.textFrame:SetAlpha(0)
+      end
+    else
+      NS.Interface.textFrame:SetAlpha(1)
+    end
   else
     MMRTrackerFrame.inQueue = false
 

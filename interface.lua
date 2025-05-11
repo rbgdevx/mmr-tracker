@@ -153,8 +153,7 @@ function Interface:AddText(frame, text, key, bracket, hasData)
   else
     local hideNoResults = NS.db.global.hideNoResults and 0 or 1
     if bracket == "none" then
-      local hideIntro = NS.db.global.hideIntro
-      matchingText:SetAlpha(hideIntro and 0 or 1)
+      matchingText:SetAlpha(1)
     elseif bracket == "2v2" then
       matchingText:SetAlpha(NS.db.global.show2v2 and hideNoResults or 0)
     elseif bracket == "3v3" then
@@ -165,29 +164,6 @@ function Interface:AddText(frame, text, key, bracket, hasData)
       matchingText:SetAlpha(NS.db.global.showShuffle and hideNoResults or 0)
     elseif bracket == "blitz" then
       matchingText:SetAlpha(NS.db.global.showBlitz and hideNoResults or 0)
-    end
-  end
-
-  if bracket == "none" then
-    if not Interface.buttonFrame then
-      local ButtonFrame = CreateFrame("Button", AddonName .. "NoDataButton", frame.textFrame, "UIPanelButtonTemplate")
-      ButtonFrame:ClearAllPoints()
-      ButtonFrame:SetPoint("LEFT", matchingText, "RIGHT", 5, 0)
-      ButtonFrame:SetText("Dismiss")
-      ButtonFrame:SetWidth(75)
-      ButtonFrame:SetHeight(25)
-      ButtonFrame:SetScript("OnClick", function()
-        NS.db.global.hideIntro = true
-        matchingText:SetAlpha(0)
-        ButtonFrame:Hide()
-      end)
-      Interface.buttonFrame = ButtonFrame
-    else
-      if hasData or NS.db.global.hideIntro then
-        Interface.buttonFrame:Hide()
-      else
-        Interface.buttonFrame:Show()
-      end
     end
   end
 

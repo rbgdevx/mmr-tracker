@@ -1,5 +1,15 @@
 # MMR Tracker
 
+## [v1.1.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.2) (2025-05-11)
+
+- Fixing bug where text was showing up in game while also in queue still for another game
+- Getting rid of hide intro text option
+- Setting date to show NA format while on an NA character and EU while on an EU character
+- Removing shuffle from being shown by default
+- Removing intro button entirely
+- Assigning addon to my own category for organization
+- Update toc
+
 ## [v1.1.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.1) (2025-03-10)
 
 - Changing rated arena win team names to fix non-english client name matching and adding fallback just incase

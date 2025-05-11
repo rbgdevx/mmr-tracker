@@ -68,8 +68,22 @@ NS.GetClassIcon = function(classToken, size)
   return "|A:classicon-" .. slower(classToken) .. ":" .. size .. ":" .. size .. "|a"
 end
 
-NS.DateClean = function(timeRaw)
+-- EU Format: 10:05 PM 07/05/2025
+NS.DateCleanEU = function(timeRaw)
   return NS.Timezone and date("%I:%M %p %d/%m/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %d/%m/%Y")
+end
+
+NS.DateFormatEU = function(timeRaw)
+  return NS.Timezone and date("%I:%M %p %d/%m/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %d/%m/%Y", timeRaw)
+end
+
+-- US Format: 10:05 PM 05/07/2025
+NS.DateCleanNA = function(timeRaw)
+  return NS.Timezone and date("%I:%M %p %m/%d/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %m/%d/%Y")
+end
+
+NS.DateFormatNA = function(timeRaw)
+  return NS.Timezone and date("%I:%M %p %m/%d/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %m/%d/%Y", timeRaw)
 end
 
 NS.Round = function(number, idp)
@@ -219,7 +233,7 @@ NS.MigrateDB = function(db)
   end
 
   -- Replace the old spells table with the updated one
-  db.data = data
+  -- db.data = data
   db.migrated = true
 end
 
@@ -367,14 +381,13 @@ NS.DisplayBracketData = function()
         or playerData[bracketKey]
 
       if gameInfo[#gameInfo].season ~= nil and gameInfo[#gameInfo].season == NS.season then
-        NS.db.global.hideIntro = true
         hasAnySeasonData = true
 
         -- Format strings for display
         local soloLabel = PVP_RATING
-        local preMatchValue = gameInfo[#gameInfo].rating
-        local postMathValue = gameInfo[#gameInfo].rating + gameInfo[#gameInfo].ratingChange
-        local valueChange = gameInfo[#gameInfo].ratingChange
+        local preMatchValue = math.abs(gameInfo[#gameInfo].rating)
+        local postMathValue = math.abs(gameInfo[#gameInfo].rating + gameInfo[#gameInfo].ratingChange)
+        local valueChange = math.abs(gameInfo[#gameInfo].ratingChange)
         if bracket == 6 and NS.db.global.showShuffleRating == false then
           soloLabel = "MMR:"
           preMatchValue = gameInfo[#gameInfo].preMatchMMR
@@ -399,7 +412,6 @@ NS.DisplayBracketData = function()
         local displayString = bracketString .. valueString .. changeString
         NS.Interface:AddText(NS.Interface, displayString, index, key, hasData)
       else
-        NS.db.global.hideIntro = false
         -- Display message if no data for this bracket
         local noDataString = sformat("No %s data yet", NS.TRACKED_BRACKETS[bracket])
         NS.Interface:AddText(NS.Interface, noDataString, index, key, false)
@@ -507,8 +519,10 @@ NS.UpdateTable = function()
       -- NS.GetClassIcon(_gameInfo.classToken, 20),
       specInfo = "|T" .. specIcon .. ":20:20:0:0|t"
     end
+    local dateString = NS.playerInfo.region == "US" and NS.DateFormatNA(gameInfo.time) or NS.DateFormatEU(gameInfo.time)
+
     tinsert(rows, {
-      gameInfo.date,
+      dateString,
       gameInfo.mapName,
       specInfo,
       NS.TRACKED_BRACKETS[bracket],
