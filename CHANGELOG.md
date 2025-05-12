@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.1.3](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.3) (2025-05-12)
+
+- Fixing time format in the table view
+
 ## [v1.1.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.2) (2025-05-11)
 
 - Fixing bug where text was showing up in game while also in queue still for another game

@@ -68,22 +68,22 @@ NS.GetClassIcon = function(classToken, size)
   return "|A:classicon-" .. slower(classToken) .. ":" .. size .. ":" .. size .. "|a"
 end
 
--- EU Format: 10:05 PM 07/05/2025
-NS.DateCleanEU = function(timeRaw)
-  return NS.Timezone and date("%I:%M %p %d/%m/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %d/%m/%Y")
+NS.DateFormat = function(timeRaw, timeZone, region)
+  if region == "US" then
+    return timeZone and date("%I:%M %p %m/%d/%y", timeRaw + (timeZone * 3600)) or date("%I:%M %p %m/%d/%y", timeRaw)
+  else
+    return timeZone and date("%H:%M %d.%m.%y", timeRaw + (timeZone * 3600)) or date("%H:%M %d.%m.%y", timeRaw)
+  end
 end
 
-NS.DateFormatEU = function(timeRaw)
-  return NS.Timezone and date("%I:%M %p %d/%m/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %d/%m/%Y", timeRaw)
-end
-
--- US Format: 10:05 PM 05/07/2025
-NS.DateCleanNA = function(timeRaw)
-  return NS.Timezone and date("%I:%M %p %m/%d/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %m/%d/%Y")
-end
-
-NS.DateFormatNA = function(timeRaw)
-  return NS.Timezone and date("%I:%M %p %m/%d/%Y", timeRaw + (NS.Timezone * 3600)) or date("%I:%M %p %m/%d/%Y", timeRaw)
+-- US Format: 10:05 PM 05/07/25
+-- EU Format: 22:05 07.05.25
+NS.DateClean = function(timeRaw, timeZone, region)
+  if region == "US" then
+    return timeZone and date("%I:%M %p %m/%d/%y", timeRaw + (timeZone * 3600)) or date("%I:%M %p %m/%d/%y", timeRaw)
+  else
+    return timeZone and date("%H:%M %d.%m.%y", timeRaw + (timeZone * 3600)) or date("%H:%M %d.%m.%y", timeRaw)
+  end
 end
 
 NS.Round = function(number, idp)
@@ -478,6 +478,11 @@ NS.UpdateTable = function()
   -- 	NS.sortByDate(allGames)
   -- end
 
+  -- if not NS.Timezone then
+  --   local _, tz = NS.GetUTCTimestamp(true)
+  --   NS.Timezone = tz
+  -- end
+
   local rows = {}
   for _, gameInfo in pairs(allGames) do
     local bracket = tonumber(gameInfo.bracket)
@@ -519,7 +524,7 @@ NS.UpdateTable = function()
       -- NS.GetClassIcon(_gameInfo.classToken, 20),
       specInfo = "|T" .. specIcon .. ":20:20:0:0|t"
     end
-    local dateString = NS.playerInfo.region == "US" and NS.DateFormatNA(gameInfo.time) or NS.DateFormatEU(gameInfo.time)
+    local dateString = NS.DateFormat(gameInfo.time, NS.Timezone, NS.playerInfo.region)
 
     tinsert(rows, {
       dateString,

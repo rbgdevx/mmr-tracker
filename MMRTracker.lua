@@ -70,7 +70,7 @@ MMRTrackerGUI:AddChild(SimpleGroup)
 local columns = {
   {
     name = "Date",
-    width = 135,
+    width = 125,
     align = "CENTER",
     bgcolor = {
       r = 0.15,
@@ -84,7 +84,7 @@ local columns = {
   },
   {
     name = "Map",
-    width = 125,
+    width = 130,
     align = "CENTER",
   },
   {
@@ -209,7 +209,7 @@ function NS.TrackMMR()
     gameTime = GetCurrentCalendarTime(),
     localTime = GetServerTimeLocal(),
     time = TIME,
-    date = NS.DateCleanEU(TIME),
+    date = NS.DateClean(TIME, NS.Timezone, NS.playerInfo.region),
     preMatchMMR = 0,
     mmrChange = 0,
     postMatchMMR = 0,
@@ -555,7 +555,7 @@ end
 function MMRTracker:PLAYER_LOGIN()
   MMRTrackerFrame:UnregisterEvent("PLAYER_LOGIN")
 
-  NS.Timezone = NS.GetUTCTimestamp(true)
+  NS.SessionStart, NS.Timezone = NS.GetUTCTimestamp(true)
 
   local _playerGUID = UnitGUID("player")
   local _region = NS.REGION_NAME[GetActualRegion(playerGUID)]

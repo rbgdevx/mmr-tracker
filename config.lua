@@ -28,6 +28,7 @@ NS.REGION_NAME = {
   [5] = "CN",
 }
 
+NS.SessionStart = nil
 NS.Timezone = nil
 
 -- 38 is the first season this addon came out - T.W.W. Season 1
