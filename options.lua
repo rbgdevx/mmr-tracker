@@ -190,18 +190,32 @@ NS.AceConfig = {
             return NS.db.global.showOnlyInQueue
           end,
         },
-        showInInstances = {
-          name = "Show inside games",
-          desc = "Show the text while in an instance.",
+        showInPVE = {
+          name = "Show in Dungeons and Raids",
+          desc = "Show the text while in pve content.",
           type = "toggle",
           width = "double",
           order = 4,
           set = function(_, val)
-            NS.db.global.showInInstances = val
+            NS.db.global.showInPVE = val
             NS.OnDbChanged()
           end,
           get = function(_)
-            return NS.db.global.showInInstances
+            return NS.db.global.showInPVE
+          end,
+        },
+        showInPVP = {
+          name = "Show in Arena and Battlegrounds",
+          desc = "Show the text while in pvp content.",
+          type = "toggle",
+          width = "double",
+          order = 5,
+          set = function(_, val)
+            NS.db.global.showInPVP = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showInPVP
           end,
         },
         hideNoResults = {
@@ -209,7 +223,7 @@ NS.AceConfig = {
           desc = "When there is no data available yet for a given bracket we show 'No data yet' text.",
           type = "toggle",
           width = "double",
-          order = 5,
+          order = 6,
           set = function(_, val)
             NS.db.global.hideNoResults = val
             NS.OnDbChanged()
@@ -223,7 +237,7 @@ NS.AceConfig = {
           desc = "Hides the minimap icon.",
           type = "toggle",
           width = "double",
-          order = 6,
+          order = 7,
           set = function(_, val)
             NS.db.minimap.hide = val
             NS.OnDbChanged()
@@ -236,7 +250,7 @@ NS.AceConfig = {
           name = "Font Size",
           type = "range",
           width = "double",
-          order = 7,
+          order = 8,
           min = 2,
           max = 64,
           step = 1,
@@ -252,7 +266,7 @@ NS.AceConfig = {
           name = "Font Family",
           type = "select",
           width = "double",
-          order = 8,
+          order = 9,
           dialogControl = "LSM30_Font",
           values = SharedMedia:HashTable("font"),
           set = function(_, val)
@@ -267,7 +281,7 @@ NS.AceConfig = {
           type = "color",
           name = "Color",
           width = "full",
-          order = 9,
+          order = 10,
           hasAlpha = true,
           set = function(_, val1, val2, val3, val4)
             NS.db.global.color.r = val1

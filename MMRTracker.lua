@@ -444,12 +444,20 @@ end
 
 local function toggleVisibilityInQueue()
   local status = GetBattlefieldStatus(1)
+  local inInstance, instanceType = IsInInstance()
+  local inArena = inInstance and (instanceType == "arena")
+  local inBattleground = inInstance and (instanceType == "pvp")
+  local inPVP = inArena or inBattleground
+  local inPVE = not inPVP and inInstance
+
+  local showInPVE = NS.db.global.showInPVE and inPVE
+  local showInPVP = NS.db.global.showInPVP and inPVP
 
   if status == "queued" then
     MMRTrackerFrame.inQueue = true
 
-    if IsInInstance() then
-      if NS.db.global.showInInstances then
+    if inInstance then
+      if showInPVE or showInPVP then
         NS.Interface.textFrame:SetAlpha(1)
       else
         NS.Interface.textFrame:SetAlpha(0)
@@ -460,8 +468,8 @@ local function toggleVisibilityInQueue()
   else
     MMRTrackerFrame.inQueue = false
 
-    if IsInInstance() then
-      if NS.db.global.showInInstances then
+    if inInstance then
+      if showInPVE or showInPVP then
         NS.Interface.textFrame:SetAlpha(1)
       else
         NS.Interface.textFrame:SetAlpha(0)
@@ -594,6 +602,15 @@ MMRTrackerFrame:RegisterEvent("PLAYER_LOGIN")
 function NS.OnDbChanged()
   MMRTrackerFrame.dbChanged = true
 
+  local inInstance, instanceType = IsInInstance()
+  local inArena = inInstance and (instanceType == "arena")
+  local inBattleground = inInstance and (instanceType == "pvp")
+  local inPVP = inArena or inBattleground
+  local inPVE = not inPVP and inInstance
+
+  local showInPVE = NS.db.global.showInPVE and inPVE
+  local showInPVP = NS.db.global.showInPVP and inPVP
+
   NS.DisplayBracketData()
 
   local rows = NS.UpdateTable()
@@ -605,8 +622,8 @@ function NS.OnDbChanged()
     NS.Interface:Unlock(NS.Interface.textFrame)
   end
 
-  if IsInInstance() then
-    if NS.db.global.showInInstances then
+  if inInstance then
+    if showInPVE or showInPVP then
       NS.Interface.textFrame:SetAlpha(1)
     else
       NS.Interface.textFrame:SetAlpha(0)

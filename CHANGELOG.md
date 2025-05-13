@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.1.4](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.4) (2025-05-12)
+
+- Adding options to be able to control visibility in PVE and PVP separately
+
 ## [v1.1.3](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.3) (2025-05-12)
 
 - Fixing time format in the table view
