@@ -105,19 +105,34 @@ NS.GetUTCTimestamp = function(timezone)
 end
 
 -- Helper function to convert date strings into sortable values
-local function parseDate(dateString)
-  local hour, minute, ampm, day, month, year = dateString:match("(%d+):(%d+) (%a+) (%d+)/(%d+)/(%d+)")
+local function parseDate(dateString, _region)
+  local hour, minute, ampm, day, month, year
+  local region = _region
+
+  if not region then
+    region = NS.playerInfo.region
+    return false
+  end
+
+  if region == "US" then
+    hour, minute, ampm, day, month, year = dateString:match("(%d+):(%d+) (%a+) (%d+)/(%d+)/(%d+)")
+  else
+    hour, minute, day, month, year = dateString:match("(%d+):(%d+) (%d+).(%d+).(%d+)")
+    ampm = nil -- Already in 24-hour format
+  end
+
+  -- Convert string parts to numbers
   hour = tonumber(hour)
   minute = tonumber(minute)
   day = tonumber(day)
   month = tonumber(month)
   year = tonumber(year)
 
-  -- Convert 12-hour time to 24-hour time
-  if ampm == "PM" and hour ~= 12 then
-    hour = hour + 12
-  elseif ampm == "AM" and hour == 12 then
+  -- Convert to 24-hour time if needed
+  if ampm == "AM" and hour == 12 then
     hour = 0
+  elseif ampm == "PM" and hour ~= 12 then
+    hour = hour + 12
   end
 
   -- Create a table to represent the date and time
@@ -127,7 +142,7 @@ local function parseDate(dateString)
     monthDay = day,
     weekday = 1, -- Dummy value, not used for sorting
     hour = hour,
-    minute = minute, -- Fixed field name
+    minute = minute,
   }
 end
 
@@ -250,11 +265,11 @@ NS.filterBySeason = function(data)
   return filteredGames
 end
 
-NS.sortByDate = function(data)
+NS.sortByDate = function(data, region)
   -- Sort the data table using the parsed date and time
   table.sort(data, function(a, b)
-    local dateA = parseDate(a.date)
-    local dateB = parseDate(b.date)
+    local dateA = parseDate(a.date, region)
+    local dateB = parseDate(b.date, region)
     return CompareCalendarTime(dateA, dateB) < 0 -- Newest on top
   end)
 end
@@ -264,8 +279,8 @@ NS.CustomSort = function(_data, _rowA, _rowB, _sortByColumn)
   local direction = column.sort or column.defaultsort or ScrollingTable.SORT_ASC
   local rowA = _data.data[_rowA][_sortByColumn]
   local rowB = _data.data[_rowB][_sortByColumn]
-  local dateA = parseDate(rowA)
-  local dateB = parseDate(rowB)
+  local dateA = parseDate(rowA, NS.playerInfo.region)
+  local dateB = parseDate(rowB, NS.playerInfo.region)
   if rowA == rowB then
     return false
   else
@@ -320,7 +335,7 @@ NS.FlattenAllGames = function(playerInfo)
   allGames = NS.filterBySeason(allGames)
 
   -- Sort the data table using the parsed date and time
-  NS.sortByDate(allGames)
+  NS.sortByDate(allGames, playerInfo.region)
 
   return allGames
 end
@@ -475,7 +490,7 @@ NS.UpdateTable = function()
   local allGames = NS.FlattenAllGames(NS.playerInfo)
   -- if next(MMRTrackerFrame.lastGame) ~= nil then
   -- 	tinsert(allGames, MMRTrackerFrame.lastGame)
-  -- 	NS.sortByDate(allGames)
+  -- 	NS.sortByDate(allGames, NS.playerInfo.region)
   -- end
 
   -- if not NS.Timezone then

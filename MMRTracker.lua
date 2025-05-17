@@ -70,7 +70,7 @@ MMRTrackerGUI:AddChild(SimpleGroup)
 local columns = {
   {
     name = "Date",
-    width = 125,
+    width = 120,
     align = "CENTER",
     bgcolor = {
       r = 0.15,
@@ -84,7 +84,7 @@ local columns = {
   },
   {
     name = "Map",
-    width = 130,
+    width = 135,
     align = "CENTER",
   },
   {

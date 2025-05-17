@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.1.5](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.5) (2025-05-17)
+
+- Fixing EU bug preventing data from being displayed in the table view
+
 ## [v1.1.4](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.4) (2025-05-12)
 
 - Adding options to be able to control visibility in PVE and PVP separately
