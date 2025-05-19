@@ -1,6 +1,6 @@
 ## Interface: 110105
 ## Title: MMR Tracker
-## Version: 1.1.6
+## Version: 1.1.7
 ## Author: RBGDEV
 ## Notes: Tracks personal MMR and Rating for all pvp brackets
 ## OptionalDeps: AceConfig-3.0, AceGUI-3.0, AceGUI-3.0-SharedMediaWidgets, CallbackHandler-1.0, lib-st, LibDataBroker-1.1, LibDBIcon-1.0, LibSharedMedia-3.0, LibStub

@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.1.7](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.7) (2025-05-18)
+
+- Fixing sorting bug on NA
+
 ## [v1.1.6](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.6) (2025-05-18)
 
 - Fixing sorting cross region sorting bug

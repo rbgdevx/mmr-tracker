@@ -111,7 +111,7 @@ local function parseDate(time, region)
   local dateString = NS.DateFormat(time, NS.Timezone, region)
 
   if region == "US" then
-    hour, minute, ampm, day, month, year = dateString:match("(%d+):(%d+) (%a+) (%d+)/(%d+)/(%d+)")
+    hour, minute, ampm, month, day, year = dateString:match("(%d+):(%d+) (%a+) (%d+)/(%d+)/(%d+)")
   else
     hour, minute, day, month, year = dateString:match("(%d+):(%d+) (%d+).(%d+).(%d+)")
     ampm = nil -- Already in 24-hour format
