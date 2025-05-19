@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.1.6](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.6) (2025-05-18)
+
+- Fixing sorting cross region sorting bug
+
 ## [v1.1.5](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.5) (2025-05-17)
 
 - Fixing EU bug preventing data from being displayed in the table view

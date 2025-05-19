@@ -105,14 +105,10 @@ NS.GetUTCTimestamp = function(timezone)
 end
 
 -- Helper function to convert date strings into sortable values
-local function parseDate(dateString, _region)
+local function parseDate(time, region)
   local hour, minute, ampm, day, month, year
-  local region = _region
 
-  if not region then
-    region = NS.playerInfo.region
-    return false
-  end
+  local dateString = NS.DateFormat(time, NS.Timezone, region)
 
   if region == "US" then
     hour, minute, ampm, day, month, year = dateString:match("(%d+):(%d+) (%a+) (%d+)/(%d+)/(%d+)")
@@ -268,8 +264,8 @@ end
 NS.sortByDate = function(data, region)
   -- Sort the data table using the parsed date and time
   table.sort(data, function(a, b)
-    local dateA = parseDate(a.date, region)
-    local dateB = parseDate(b.date, region)
+    local dateA = parseDate(a.time, region)
+    local dateB = parseDate(b.time, region)
     return CompareCalendarTime(dateA, dateB) < 0 -- Newest on top
   end)
 end
@@ -277,13 +273,16 @@ end
 NS.CustomSort = function(_data, _rowA, _rowB, _sortByColumn)
   local column = _data.cols[_sortByColumn]
   local direction = column.sort or column.defaultsort or ScrollingTable.SORT_ASC
-  local rowA = _data.data[_rowA][_sortByColumn]
-  local rowB = _data.data[_rowB][_sortByColumn]
-  local dateA = parseDate(rowA, NS.playerInfo.region)
-  local dateB = parseDate(rowB, NS.playerInfo.region)
+  -- Use secret TIME field for date to normalize between region
+  local correctedSortByColumn = _sortByColumn == 1 and 10 or _sortByColumn
+  local rowA = _data.data[_rowA][correctedSortByColumn]
+  local rowB = _data.data[_rowB][correctedSortByColumn]
   if rowA == rowB then
     return false
   else
+    local dateA = parseDate(rowA, NS.playerInfo.region)
+    local dateB = parseDate(rowB, NS.playerInfo.region)
+
     if direction == ScrollingTable.SORT_ASC then
       return CompareCalendarTime(dateA, dateB) > 0
     else
