@@ -75,6 +75,7 @@ NS.DefaultDatabase = {
     hideIntro = false,
     fontSize = 24,
     fontFamily = "Friz Quadrata TT",
+    includeChange = false,
     color = {
       r = 255 / 255,
       g = 255 / 255,

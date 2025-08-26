@@ -1,21 +1,10 @@
-## Interface: 110105
+## Interface: 110200
 ## Title: MMR Tracker
-## Version: 1.1.7
+## Version: 1.2.0
 ## Author: RBGDEV
 ## Notes: Tracks personal MMR and Rating for all pvp brackets
-## OptionalDeps: AceConfig-3.0, AceGUI-3.0, AceGUI-3.0-SharedMediaWidgets, CallbackHandler-1.0, lib-st, LibDataBroker-1.1, LibDBIcon-1.0, LibSharedMedia-3.0, LibStub
 ## SavedVariables: MMRTrackerDB
-## Category-enUS: RBGDEV
-## Category-deDE: RBGDEV
-## Category-esES: RBGDEV
-## Category-esMX: RBGDEV
-## Category-frFR: RBGDEV
-## Category-itIT: RBGDEV
-## Category-koKR: RBGDEV
-## Category-ptBR: RBGDEV
-## Category-ruRU: RBGDEV
-## Category-zhCN: RBGDEV
-## Category-zhTW: RBGDEV
+## Category: RBGDEV
 ## X-Category: Battlegrounds/PvP
 ## X-License: All Rights Reserved
 ## X-Website: https://www.curseforge.com/wow/addons/mmr-tracker

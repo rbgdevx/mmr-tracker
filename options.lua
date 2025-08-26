@@ -277,11 +277,16 @@ NS.AceConfig = {
             return NS.db.global.fontFamily
           end,
         },
+        spacer1 = {
+          name = "",
+          type = "description",
+          order = 10,
+        },
         color = {
           type = "color",
           name = "Color",
-          width = "full",
-          order = 10,
+          width = 0.4,
+          order = 11,
           hasAlpha = true,
           set = function(_, val1, val2, val3, val4)
             NS.db.global.color.r = val1
@@ -293,6 +298,24 @@ NS.AceConfig = {
           get = function(_)
             return NS.db.global.color.r, NS.db.global.color.g, NS.db.global.color.b, NS.db.global.color.a
           end,
+        },
+        includeChange = {
+          name = "Include gains/losses text",
+          type = "toggle",
+          width = 1.1,
+          order = 12,
+          set = function(_, val)
+            NS.db.global.includeChange = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.includeChange
+          end,
+        },
+        spacer2 = {
+          name = "",
+          type = "description",
+          order = 13,
         },
         reset = {
           name = "Reset Everything",

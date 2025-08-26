@@ -4,6 +4,7 @@ local CreateFrame = CreateFrame
 local IsInInstance = IsInInstance
 local UnitAffectingCombat = UnitAffectingCombat
 local UnitGUID = UnitGUID
+local UnitName = UnitName
 local UnitFullName = UnitFullName
 local SetBattlefieldScoreFaction = SetBattlefieldScoreFaction
 local GetBattlefieldTeamInfo = GetBattlefieldTeamInfo
@@ -19,6 +20,10 @@ local GetBattlefieldStatus = GetBattlefieldStatus
 local UnitClass = UnitClass
 local GetBattlefieldWinner = GetBattlefieldWinner
 local GetCurrentArenaSeason = GetCurrentArenaSeason
+local IsArenaSkirmish = IsArenaSkirmish
+local GetBattlefieldScore = GetBattlefieldScore
+local IsActiveBattlefieldArena = IsActiveBattlefieldArena
+local GetNumBattlefieldScores = GetNumBattlefieldScores
 
 local tinsert = table.insert
 local sformat = string.format
@@ -30,6 +35,12 @@ local IsRatedMap = C_PvP.IsRatedMap
 local GetGameAccountInfoByGUID = C_BattleNet.GetGameAccountInfoByGUID
 local GetCurrentCalendarTime = C_DateAndTime.GetCurrentCalendarTime
 local GetServerTimeLocal = C_DateAndTime.GetServerTimeLocal
+local IsRatedBattleground = C_PvP.IsRatedBattleground
+local IsSoloRBG = C_PvP.IsSoloRBG
+local IsRatedArena = C_PvP.IsRatedArena
+local IsSoloShuffle = C_PvP.IsSoloShuffle
+local IsRatedSoloShuffle = C_PvP.IsRatedSoloShuffle
+local IsInBrawl = C_PvP.IsInBrawl
 
 local AceGUI = LibStub("AceGUI-3.0")
 local AceConfig = LibStub("AceConfig-3.0")
@@ -65,6 +76,13 @@ SimpleGroup:SetLayout("Fill")
 SimpleGroup:SetFullHeight(true)
 SimpleGroup:SetFullWidth(true)
 MMRTrackerGUI:AddChild(SimpleGroup)
+
+local mapIDRemap = {
+  [968] = 566,
+  [998] = 1035,
+  [1681] = 2107,
+  [2197] = 30,
+}
 
 -- Date -- Map -- Spec -- Faction -- PreMatchMMR -- MMRChange -- PostMatchMMR -- Win
 local columns = {
@@ -178,7 +196,13 @@ local function GetActualRegion(guid)
 end
 
 local playerGUID = UnitGUID("player")
-local playerRegion = NS.REGION_NAME[GetActualRegion(playerGUID)]
+local regionID = GetActualRegion(playerGUID)
+local regionMatch = NS.REGION_NAME[regionID]
+local regionName = regionMatch or "UNKNOWN"
+if not regionName then
+  print("Unknown Region, Please report to the addon author", "Region ID: " .. regionID)
+end
+local playerRegion = regionName
 local playerName, playerRealm = UnitFullName("player")
 local playerFullName = playerName .. (playerRealm and ("-" .. playerRealm) or "")
 NS.playerInfo = {
@@ -198,6 +222,18 @@ end
 function NS.TrackMMR()
   local TIME = NS.GetUTCTimestamp()
 
+  local hidden = false
+  local map = select(8, GetInstanceInfo())
+  local isArena = IsActiveBattlefieldArena()
+  local isBrawl = IsInBrawl()
+  local isSoloShuffle = IsSoloShuffle()
+  local isRated = true
+  local playerNum = GetNumBattlefieldScores()
+
+  if mapIDRemap[map] then
+    map = mapIDRemap[map]
+  end
+
   local gameInfo = {
     mapName = MMRTrackerFrame.instanceName,
     race = "",
@@ -216,6 +252,7 @@ function NS.TrackMMR()
     bracket = -1,
     teamRating = 0,
     previousRating = 0,
+    newRating = 0,
     ratingChange = 0,
     rating = 0,
     winner = 0,
@@ -250,7 +287,8 @@ function NS.TrackMMR()
     gameInfo.mmrChange = mmrChange
     gameInfo.postMatchMMR = postMatchMMR
     gameInfo.teamRating = teamRating
-    gameInfo.previousRating = info.rating - info.ratingChange
+    gameInfo.previousRating = info.rating
+    gameInfo.newRating = info.rating + info.ratingChange
     gameInfo.ratingChange = info.ratingChange
     gameInfo.rating = info.rating
     gameInfo.winner = winner
@@ -297,6 +335,7 @@ function NS.TrackMMR()
         bracket = bracketKey,
         teamRating = gameInfo.teamRating,
         previousRating = gameInfo.previousRating,
+        newRating = gameInfo.newRating,
         ratingChange = gameInfo.ratingChange,
         rating = gameInfo.rating,
         winner = gameInfo.winner,
@@ -329,12 +368,24 @@ function NS.TrackMMR()
         postMathValue = gameInfo.postMatchMMR
         valueChange = gameInfo.mmrChange
       end
+      -- if preMatchValue < 0 then
+      -- 	preMatchValue = 0
+      -- end
+      -- if postMathValue < 0 then
+      -- 	postMathValue = 0
+      -- end
       local bracketString = NS.TRACKED_BRACKETS[gameInfo.bracket] .. " " .. soloLabel .. " "
       local valueString = NS.db.global.showMMRDifference and (preMatchValue .. " › " .. postMathValue)
         or postMathValue
       local positiveChange = valueChange > 0
       local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
-      local colorString = valueChange == 0 and "" or (positiveChange and "|cFF00FF00" or "|cFFFF0000")
+      local valueColor = positiveChange and "|cFF00FF00" or "|cFFFF0000"
+      -- convert user color rgb to hex
+      local dbColor = NS.db.global.color
+      local userColorHex =
+        sformat("%02X%02X%02X%02X", dbColor.a * 255, dbColor.r * 255, dbColor.g * 255, dbColor.b * 255)
+      local userColor = "|c" .. userColorHex
+      local colorString = valueChange == 0 and "" or NS.db.global.includeChange and userColor or valueColor
       local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")" .. "|r")
         or ""
       local string = bracketString .. valueString .. changeString
@@ -367,6 +418,41 @@ function NS.TrackMMR()
         end
       end
     end
+  end
+
+  for i = 1, playerNum do
+    local data = { GetBattlefieldScore(i) }
+    if data[1]:lower() == UnitName("PLAYER"):lower() then
+      playerNum = i
+    end
+  end
+
+  if
+    IsRatedBattleground()
+    or IsSoloRBG()
+    or (IsRatedArena() and not IsArenaSkirmish() and not isSoloShuffle)
+    or IsRatedSoloShuffle()
+  then
+    isRated = true
+  else
+    isRated = false
+  end
+
+  if not isArena then
+    if not isRated and playerNum then
+      playerNum = 1
+    end
+  end
+
+  -- Hide corrupted records
+  if not playerNum or map == 1170 or map == 2177 or (isArena and isBrawl and not isSoloShuffle) then
+    hidden = true
+  else
+    hidden = false
+  end
+
+  if hidden then
+    print("\124cFF74D06C[MMRTracker]\124r " .. "API returned corrupted data. Match will not be recorded.")
   end
 
   MMRTrackerFrame.instanceName = ""

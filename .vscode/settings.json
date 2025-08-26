@@ -5,16 +5,20 @@
     "SlashCmdList",
     "AuraUtil",
     "PVP_RATING",
+    "UIParent",
+    "FONT_COLOR_CODE_CLOSE",
+    "GameFontNormal",
+    "CLOSE",
+    "ChatFontNormal",
+    "OKAY",
     "VICTORY_TEXT_ARENA0",
     "VICTORY_TEXT_ARENA1",
     "RAID_CLASS_COLORS",
     "FACTION_ALLIANCE",
     "FACTION_HORDE",
-    "UIParent",
     "SELECTED_CHAT_FRAME",
     "DEFAULT_CHAT_FRAME",
     "NORMAL_FONT_COLOR",
-    "GameFontNormal",
     "GameFontHighlight",
     "ACCEPT",
     "CANCEL",
@@ -22,17 +26,13 @@
     "GameFontHighlightLarge",
     "GameFontHighlightSmall",
     "BackdropTemplateMixin",
-    "CLOSE",
     "GameFontDisableSmall",
     "GameTooltip",
     "GameFontNormalSmall",
-    "FONT_COLOR_CODE_CLOSE",
     "SetDesaturation",
     "WOW_PROJECT_ID",
     "WOW_PROJECT_MAINLINE",
     "ColorPickerFrame",
-    "ChatFontNormal",
-    "OKAY",
     "NOT_BOUND",
     "Minimap",
     "AddonCompartmentFrame",
@@ -40,8 +40,7 @@
     "getglobal",
     "FauxScrollFrame_OnVerticalScroll",
     "FauxScrollFrame_GetOffset",
-    "CopyTable",
-    "FrameUtil"
+    "CopyTable"
   ],
   "Lua.runtime.builtin": {
     "basic": "disable",
@@ -55,6 +54,6 @@
     "utf8": "disable"
   },
   "Lua.workspace.library": [
-    "c:\\Users\\17186\\.cursor\\extensions\\ketho.wow-api-0.20.6\\Annotations\\Core"
+    "c:\\Users\\17186\\.cursor\\extensions\\ketho.wow-api-0.20.7\\Annotations\\Core"
   ]
 }

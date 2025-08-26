@@ -1,5 +1,16 @@
 # MMR Tracker
 
+## [v1.2.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.2.0) (2025-08-26)
+
+- Adding corrupted data check
+- New region checking code
+- Storing variables for reference
+- Fixing correctly setting previous and new rating changes
+- Fixing math on negative values
+- New color setting to include overriding gains/losses
+- Cleanup
+- Update toc
+
 ## [v1.1.7](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.1.7) (2025-05-18)
 
 - Fixing sorting bug on NA

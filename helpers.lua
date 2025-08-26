@@ -12,7 +12,6 @@ local tonumber = tonumber
 local time = time
 local date = date
 
-local twipe = table.wipe
 local sformat = string.format
 local tinsert = table.insert
 local mfloor = math.floor
@@ -399,9 +398,9 @@ NS.DisplayBracketData = function()
 
         -- Format strings for display
         local soloLabel = PVP_RATING
-        local preMatchValue = math.abs(gameInfo[#gameInfo].rating)
-        local postMathValue = math.abs(gameInfo[#gameInfo].rating + gameInfo[#gameInfo].ratingChange)
-        local valueChange = math.abs(gameInfo[#gameInfo].ratingChange)
+        local preMatchValue = gameInfo[#gameInfo].rating
+        local postMathValue = gameInfo[#gameInfo].rating + gameInfo[#gameInfo].ratingChange
+        local valueChange = gameInfo[#gameInfo].ratingChange
         if bracket == 6 and NS.db.global.showShuffleRating == false then
           soloLabel = "MMR:"
           preMatchValue = gameInfo[#gameInfo].preMatchMMR
@@ -413,12 +412,24 @@ NS.DisplayBracketData = function()
           postMathValue = gameInfo[#gameInfo].postMatchMMR
           valueChange = gameInfo[#gameInfo].mmrChange
         end
+        -- if preMatchValue < 0 then
+        -- 	preMatchValue = 0
+        -- end
+        -- if postMathValue < 0 then
+        -- 	postMathValue = 0
+        -- end
         local bracketString = NS.TRACKED_BRACKETS[bracket] .. " " .. soloLabel .. " "
         local valueString = NS.db.global.showMMRDifference and (preMatchValue .. " › " .. postMathValue)
           or postMathValue
         local positiveChange = valueChange > 0
         local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
-        local colorString = valueChange == 0 and "" or (positiveChange and "|cFF00FF00" or "|cFFFF0000")
+        local valueColor = positiveChange and "|cFF00FF00" or "|cFFFF0000"
+        -- convert user color rgb to hex
+        local dbColor = NS.db.global.color
+        local userColorHex =
+          sformat("%02X%02X%02X%02X", dbColor.a * 255, dbColor.r * 255, dbColor.g * 255, dbColor.b * 255)
+        local userColor = "|c" .. userColorHex
+        local colorString = valueChange == 0 and "" or NS.db.global.includeChange and userColor or valueColor
         local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")" .. "|r")
           or ""
 
@@ -623,27 +634,4 @@ NS.CleanupDB = function(src, dst)
     end
   end
   return dst
-end
-
--- Pool for reusing tables. (Garbage collector isn't ran in combat unless max garbage is reached, which causes fps drops)
-do
-  local pool = {}
-
-  NS.NewTable = function()
-    local t = next(pool) or {}
-    pool[t] = nil -- remove from pool
-    return t
-  end
-
-  NS.RemoveTable = function(tbl)
-    if tbl then
-      pool[twipe(tbl)] = true -- add to pool, wipe returns pointer to tbl here
-    end
-  end
-
-  NS.ReleaseTables = function()
-    if next(pool) then
-      pool = {}
-    end
-  end
 end
