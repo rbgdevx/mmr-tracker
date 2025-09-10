@@ -1,6 +1,6 @@
 ## Interface: 110200
 ## Title: MMR Tracker
-## Version: 1.2.0
+## Version: 1.2.1
 ## Author: RBGDEV
 ## Notes: Tracks personal MMR and Rating for all pvp brackets
 ## SavedVariables: MMRTrackerDB

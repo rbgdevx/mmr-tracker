@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.2.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.2.1) (2025-09-10)
+
+- Tracking duration of games
+
 ## [v1.2.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.2.0) (2025-08-26)
 
 - Adding corrupted data check

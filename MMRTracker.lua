@@ -41,6 +41,7 @@ local IsRatedArena = C_PvP.IsRatedArena
 local IsSoloShuffle = C_PvP.IsSoloShuffle
 local IsRatedSoloShuffle = C_PvP.IsRatedSoloShuffle
 local IsInBrawl = C_PvP.IsInBrawl
+local GetActiveMatchDuration = C_PvP.GetActiveMatchDuration
 
 local AceGUI = LibStub("AceGUI-3.0")
 local AceConfig = LibStub("AceConfig-3.0")
@@ -246,6 +247,7 @@ function NS.TrackMMR()
     localTime = GetServerTimeLocal(),
     time = TIME,
     date = NS.DateClean(TIME, NS.Timezone, NS.playerInfo.region),
+    duration = GetActiveMatchDuration(),
     preMatchMMR = 0,
     mmrChange = 0,
     postMatchMMR = 0,
@@ -329,6 +331,7 @@ function NS.TrackMMR()
         localTime = gameInfo.localTime,
         time = gameInfo.time,
         date = gameInfo.date,
+        duration = gameInfo.duration,
         preMatchMMR = gameInfo.preMatchMMR,
         mmrChange = gameInfo.mmrChange,
         postMatchMMR = gameInfo.postMatchMMR,
