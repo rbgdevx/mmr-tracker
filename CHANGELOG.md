@@ -1,5 +1,11 @@
 # MMR Tracker
 
+## [v1.2.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.2.2) (2025-09-12)
+
+- Adding a new setting to show before and after values separately from gains/losses
+- Adding icon to the addon
+- Cleaning up libs to reduce addon size
+
 ## [v1.2.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.2.1) (2025-09-10)
 
 - Tracking duration of games

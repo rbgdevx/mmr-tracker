@@ -40,7 +40,8 @@
     "getglobal",
     "FauxScrollFrame_OnVerticalScroll",
     "FauxScrollFrame_GetOffset",
-    "CopyTable"
+    "CopyTable",
+    "CLASS_ICON_TCOORDS"
   ],
   "Lua.runtime.builtin": {
     "basic": "disable",
@@ -55,5 +56,8 @@
   },
   "Lua.workspace.library": [
     "c:\\Users\\17186\\.cursor\\extensions\\ketho.wow-api-0.20.7\\Annotations\\Core"
+  ],
+  "Lua.diagnostics.disable": [
+    "assign-type-mismatch"
   ]
 }

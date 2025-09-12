@@ -26,6 +26,7 @@ NS.REGION_NAME = {
   [3] = "EU",
   [4] = "TW",
   [5] = "CN",
+  [90] = "PTR",
 }
 
 NS.SessionStart = nil
@@ -67,6 +68,7 @@ NS.DefaultDatabase = {
     showBlitz = true,
     showBlitzRating = false,
     showMMRDifference = true,
+    showGainsLosses = true,
     showOnlyInQueue = false,
     showInPVE = false,
     showInPVP = false,

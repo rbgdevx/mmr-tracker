@@ -377,20 +377,23 @@ function NS.TrackMMR()
       -- if postMathValue < 0 then
       -- 	postMathValue = 0
       -- end
-      local bracketString = NS.TRACKED_BRACKETS[gameInfo.bracket] .. " " .. soloLabel .. " "
-      local valueString = NS.db.global.showMMRDifference and (preMatchValue .. " › " .. postMathValue)
-        or postMathValue
-      local positiveChange = valueChange > 0
-      local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
-      local valueColor = positiveChange and "|cFF00FF00" or "|cFFFF0000"
-      -- convert user color rgb to hex
+
+      local showGainsLosses = NS.db.global.showGainsLosses
+      local showMMRDifference = NS.db.global.showMMRDifference
+      local includeChange = NS.db.global.includeChange
       local dbColor = NS.db.global.color
+      -- convert user color rgb to hex
       local userColorHex =
         sformat("%02X%02X%02X%02X", dbColor.a * 255, dbColor.r * 255, dbColor.g * 255, dbColor.b * 255)
+
+      local bracketString = NS.TRACKED_BRACKETS[gameInfo.bracket] .. " " .. soloLabel .. " "
+      local valueString = showMMRDifference and (preMatchValue .. " › " .. postMathValue) or postMathValue
+      local positiveChange = valueChange > 0
+      local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
+      local valueColor = valueChange == 0 and "" or positiveChange and "|cFF00FF00" or "|cFFFF0000"
       local userColor = "|c" .. userColorHex
-      local colorString = valueChange == 0 and "" or NS.db.global.includeChange and userColor or valueColor
-      local changeString = NS.db.global.showMMRDifference and (colorString .. " (" .. valueDifference .. ")" .. "|r")
-        or ""
+      local colorString = includeChange and userColor or valueColor
+      local changeString = showGainsLosses and (colorString .. " (" .. valueDifference .. ")" .. "|r") or ""
       local string = bracketString .. valueString .. changeString
       local str = sformat(string)
       local index = 0

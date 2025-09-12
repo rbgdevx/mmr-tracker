@@ -163,8 +163,8 @@ NS.AceConfig = {
           end,
         },
         showMMRDifference = {
-          name = "Show gains/losses",
-          desc = "Shows before and after values as well as +/- amounts.",
+          name = "Show before and after values (0 › 1)",
+          desc = 'Shows "2800 › 2900" text.',
           type = "toggle",
           width = "double",
           order = 2,
@@ -174,6 +174,20 @@ NS.AceConfig = {
           end,
           get = function(_)
             return NS.db.global.showMMRDifference
+          end,
+        },
+        showGainsLosses = {
+          name = "Show gains/losses (+/-)",
+          desc = 'Shows "+100/-50" text.',
+          type = "toggle",
+          width = "double",
+          order = 2,
+          set = function(_, val)
+            NS.db.global.showGainsLosses = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showGainsLosses
           end,
         },
         showOnlyInQueue = {
