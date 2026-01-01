@@ -1,5 +1,12 @@
 # MMR Tracker
 
+## [v1.3.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.3.0) (2026-01-01)
+
+- Updating libs for midnight
+- Updating some apis for midnight
+- Handling secret values for moving frames while in-combat or in instances
+- Updating settings
+
 ## [v1.2.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.2.2) (2025-09-12)
 
 - Adding a new setting to show before and after values separately from gains/losses

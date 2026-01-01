@@ -11,8 +11,6 @@ local GetBattlefieldTeamInfo = GetBattlefieldTeamInfo
 local tostring = tostring
 local GetServerTime = GetServerTime
 local next = next
-local GetSpecialization = GetSpecialization
-local GetSpecializationInfo = GetSpecializationInfo
 local LibStub = LibStub
 local GetCurrentRegion = GetCurrentRegion
 local GetInstanceInfo = GetInstanceInfo
@@ -42,6 +40,8 @@ local IsSoloShuffle = C_PvP.IsSoloShuffle
 local IsRatedSoloShuffle = C_PvP.IsRatedSoloShuffle
 local IsInBrawl = C_PvP.IsInBrawl
 local GetActiveMatchDuration = C_PvP.GetActiveMatchDuration
+local GetSpecialization = C_SpecializationInfo.GetSpecialization
+local GetSpecializationInfo = C_SpecializationInfo.GetSpecializationInfo
 
 local AceGUI = LibStub("AceGUI-3.0")
 local AceConfig = LibStub("AceConfig-3.0")

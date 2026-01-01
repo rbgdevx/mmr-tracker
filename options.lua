@@ -9,22 +9,14 @@ NS.AceConfig = {
   name = AddonName,
   type = "group",
   args = {
-    spacer1 = {
-      name = " ",
-      type = "description",
-      order = 0,
-    },
+    spacer1 = { name = " ", type = "description", order = 0 },
     description = {
       name = "Personal MMR only exists in Solo Shuffle/Blitz.\nFor 2v2, 3v3, and RBG you'll see Rating instead of MMR.",
       type = "description",
       fontSize = "medium",
       order = 1,
     },
-    spacer2 = {
-      name = "",
-      type = "description",
-      order = 2,
-    },
+    spacer2 = { name = "", type = "description", order = 2 },
     show2v2 = {
       name = "Show 2v2 Rating",
       type = "toggle",
@@ -90,11 +82,7 @@ NS.AceConfig = {
         return NS.db.global.showShuffleRating
       end,
     },
-    spacer3 = {
-      name = "",
-      type = "description",
-      order = 8,
-    },
+    spacer3 = { name = "", type = "description", order = 8 },
     showBlitz = {
       name = "Show Blitz MMR",
       type = "toggle",
@@ -163,7 +151,7 @@ NS.AceConfig = {
           end,
         },
         showMMRDifference = {
-          name = "Show before and after values (0 › 1)",
+          name = "Show before and after values (88 › 100)",
           desc = 'Shows "2800 › 2900" text.',
           type = "toggle",
           width = "double",
@@ -260,11 +248,12 @@ NS.AceConfig = {
             return NS.db.minimap.hide
           end,
         },
+        spacer1 = { name = "", type = "description", order = 8 },
         fontSize = {
           name = "Font Size",
           type = "range",
           width = "double",
-          order = 8,
+          order = 9,
           min = 2,
           max = 64,
           step = 1,
@@ -276,11 +265,12 @@ NS.AceConfig = {
             return NS.db.global.fontSize
           end,
         },
+        spacer2 = { name = "", type = "description", order = 10 },
         fontFamily = {
           name = "Font Family",
           type = "select",
           width = "double",
-          order = 9,
+          order = 11,
           dialogControl = "LSM30_Font",
           values = SharedMedia:HashTable("font"),
           set = function(_, val)
@@ -291,16 +281,12 @@ NS.AceConfig = {
             return NS.db.global.fontFamily
           end,
         },
-        spacer1 = {
-          name = "",
-          type = "description",
-          order = 10,
-        },
+        spacer3 = { name = "", type = "description", order = 12 },
         color = {
           type = "color",
           name = "Color",
           width = 0.4,
-          order = 11,
+          order = 13,
           hasAlpha = true,
           set = function(_, val1, val2, val3, val4)
             NS.db.global.color.r = val1
@@ -317,7 +303,7 @@ NS.AceConfig = {
           name = "Include gains/losses text",
           type = "toggle",
           width = 1.1,
-          order = 12,
+          order = 14,
           set = function(_, val)
             NS.db.global.includeChange = val
             NS.OnDbChanged()
@@ -326,11 +312,7 @@ NS.AceConfig = {
             return NS.db.global.includeChange
           end,
         },
-        spacer2 = {
-          name = "",
-          type = "description",
-          order = 13,
-        },
+        spacer4 = { name = "", type = "description", order = 15 },
         reset = {
           name = "Reset Everything",
           type = "execute",
