@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.3.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.3.1) (2026-01-02)
+
+- Fixing sorting for new years in the table view to show up on top
+
 ## [v1.3.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.3.0) (2026-01-01)
 
 - Updating libs for midnight

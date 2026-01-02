@@ -121,7 +121,7 @@ local function parseDate(time, region)
   minute = tonumber(minute)
   day = tonumber(day)
   month = tonumber(month)
-  year = tonumber(year)
+  year = tonumber(year) + 2000 -- Add 2000 to convert "YY" to "YYYY"
 
   -- Convert to 24-hour time if needed
   if ampm == "AM" and hour == 12 then
