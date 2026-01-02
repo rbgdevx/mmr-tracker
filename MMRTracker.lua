@@ -372,10 +372,10 @@ function NS.TrackMMR()
         valueChange = gameInfo.mmrChange
       end
       -- if preMatchValue < 0 then
-      -- 	preMatchValue = 0
+      --   preMatchValue = 0
       -- end
       -- if postMathValue < 0 then
-      -- 	postMathValue = 0
+      --   postMathValue = 0
       -- end
 
       local showGainsLosses = NS.db.global.showGainsLosses

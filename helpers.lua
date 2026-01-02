@@ -413,10 +413,10 @@ NS.DisplayBracketData = function()
           valueChange = gameInfo[#gameInfo].mmrChange
         end
         -- if preMatchValue < 0 then
-        -- 	preMatchValue = 0
+        --   preMatchValue = 0
         -- end
         -- if postMathValue < 0 then
-        -- 	postMathValue = 0
+        --   postMathValue = 0
         -- end
 
         local showGainsLosses = NS.db.global.showGainsLosses
@@ -452,15 +452,15 @@ NS.DisplayBracketData = function()
 
     -- Handle bracket visibility
     -- local showBracket = (bracket == 0 and NS.db.global.show2v2)
-    -- 	or (bracket == 1 and NS.db.global.show3v3)
-    -- 	or (bracket == 3 and NS.db.global.showRBG)
-    -- 	or (bracket == 6 and NS.db.global.showShuffle)
-    -- 	or (bracket == 8 and NS.db.global.showBlitz)
+    --   or (bracket == 1 and NS.db.global.show3v3)
+    --   or (bracket == 3 and NS.db.global.showRBG)
+    --   or (bracket == 6 and NS.db.global.showShuffle)
+    --   or (bracket == 8 and NS.db.global.showBlitz)
 
     -- for _, textFrame in pairs(NS.lines) do
-    -- 	if textFrame.bracket == bracket then
-    -- 		textFrame:SetAlpha(showBracket and 1 or 0)
-    -- 	end
+    --   if textFrame.bracket == bracket then
+    --     textFrame:SetAlpha(showBracket and 1 or 0)
+    --   end
     -- end
   end
 
@@ -486,7 +486,7 @@ NS.DisplayBracketData = function()
 
   -- Update frame visibility and layout
   -- for _, textFrame in pairs(NS.lines) do
-  -- 	textFrame:SetAlpha(textFrame.hasData and 1 or (NS.db.global.hideNoResults and 0 or 1))
+  --   textFrame:SetAlpha(textFrame.hasData and 1 or (NS.db.global.hideNoResults and 0 or 1))
   -- end
 
   NS.Interface:UpdateAnchors(NS.Interface, NS.lines)
@@ -502,8 +502,8 @@ end
 NS.UpdateTable = function()
   local allGames = NS.FlattenAllGames(NS.playerInfo)
   -- if next(MMRTrackerFrame.lastGame) ~= nil then
-  -- 	tinsert(allGames, MMRTrackerFrame.lastGame)
-  -- 	NS.sortByDate(allGames, NS.playerInfo.region)
+  --   tinsert(allGames, MMRTrackerFrame.lastGame)
+  --   NS.sortByDate(allGames, NS.playerInfo.region)
   -- end
 
   -- if not NS.Timezone then
