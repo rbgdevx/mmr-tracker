@@ -485,7 +485,8 @@ function MMRTracker:GROUP_ROSTER_UPDATE()
     return
   end
 
-  local name = AuraUtil.FindAuraByName("Arena Preparation", "player", "HELPFUL")
+  local aura = C_UnitAuras.GetAuraDataBySpellName("player", "Arena Preparation")
+  local name = aura and aura.name
   if not name then
     return
   end
@@ -504,7 +505,8 @@ function MMRTracker:ARENA_OPPONENT_UPDATE()
     return
   end
 
-  local name = AuraUtil.FindAuraByName("Arena Preparation", "player", "HELPFUL")
+  local aura = C_UnitAuras.GetAuraDataBySpellName("player", "Arena Preparation")
+  local name = aura and aura.name
   if not name then
     return
   end
