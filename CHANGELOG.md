@@ -1,5 +1,16 @@
 # MMR Tracker
 
+## [v1.4.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.0) (2026-02-16)
+
+- Added bracket tabs (All, 2v2, 3v3, RBG, Shuffle, Blitz) for quick filtering
+- Added dropdown filters for Region, Character, Spec, Map, Time, and Season
+- Added time filter modes: All, Today, Yesterday, This Week, This Month, This Season, Prev. Season, Select Season, Custom Range
+- Select Season reveals a Season dropdown with all historical season names (TBC S1 through TWW S3)
+- Custom Range opens the Blizzard Calendar for start/end date selection
+- Filters default to your current region, character, spec, and This Season
+- Dynamic status bar shows all active filter selections
+- Increased frame size to accommodate new UI elements
+
 ## [v1.3.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.3.2) (2026-02-11)
 
 - Fixing api usage for latest midnight patch changes

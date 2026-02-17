@@ -60,8 +60,8 @@ NS.LDB.Icon = LibDBIcon
 
 local MMRTrackerGUI = AceGUI:Create("Frame")
 MMRTrackerGUI:SetLayout("Fill")
-MMRTrackerGUI:SetWidth(750)
-MMRTrackerGUI:SetHeight(540)
+MMRTrackerGUI:SetWidth(800)
+MMRTrackerGUI:SetHeight(600)
 MMRTrackerGUI:SetTitle(AddonName)
 MMRTrackerGUI:EnableResize(false)
 MMRTrackerGUI:Hide()
@@ -89,7 +89,7 @@ local mapIDRemap = {
 local columns = {
   {
     name = "Date",
-    width = 120,
+    width = 130,
     align = "CENTER",
     bgcolor = {
       r = 0.15,
@@ -103,12 +103,12 @@ local columns = {
   },
   {
     name = "Map",
-    width = 135,
+    width = 165,
     align = "CENTER",
   },
   {
     name = "Spec",
-    width = 85,
+    width = 90,
     align = "CENTER",
     bgcolor = {
       r = 0.15,
@@ -170,6 +170,230 @@ local columns = {
 local DataTable = ScrollingTable:CreateST(columns, 22, 20, nil, SimpleGroup.frame, nil)
 DataTable:EnableSelection(true)
 NS.DataTable = DataTable
+
+-- Tabs: All, 2v2, 3v3, Shuffle, Blitz, RBG
+local tabFrame = CreateFrame("Frame", "MMRTrackerTabs", MMRTrackerGUI.frame)
+
+for i = 1, 6 do
+  local tab = CreateFrame("Button", "MMRTrackerTabsTab" .. i, MMRTrackerGUI.frame, "CharacterFrameTabTemplate")
+  tab:SetID(i)
+  tab:SetText(NS.TAB_LABELS[i])
+  if i == 1 then
+    tab:SetPoint("CENTER", MMRTrackerGUI.frame, "BOTTOMLEFT", 55, -10)
+  else
+    tab:SetPoint("LEFT", _G["MMRTrackerTabsTab" .. (i - 1)], "RIGHT", -15, 0)
+  end
+  tab:SetScript("OnClick", function(self)
+    local id = self:GetID()
+    NS.filters.tab = NS.TAB_BRACKETS[id]
+    PanelTemplates_SetTab(tabFrame, id)
+    NS.RefreshFilters()
+  end)
+end
+
+PanelTemplates_SetNumTabs(tabFrame, 6)
+PanelTemplates_SetTab(tabFrame, 1)
+
+-- Dropdown filters: Region, Character, Spec, Map, Time
+local function CreateFilterDropdown(label, width, parent, anchorTo, _, offsetX, offsetY)
+  local dropdown = AceGUI:Create("Dropdown")
+  dropdown:SetLabel(label)
+  dropdown:SetWidth(width)
+  dropdown.frame:SetParent(parent)
+  dropdown.frame:ClearAllPoints()
+  if anchorTo then
+    dropdown.frame:SetPoint("LEFT", anchorTo, "RIGHT", offsetX or 2, offsetY or 0)
+  else
+    dropdown.frame:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", offsetX or 12, offsetY or 35)
+  end
+  dropdown.frame:Show()
+  return dropdown
+end
+
+NS.RegionDropDown = CreateFilterDropdown("Region", 65, MMRTrackerGUI.frame, nil, nil, 24, 55)
+NS.CharDropDown = CreateFilterDropdown("Character", 175, MMRTrackerGUI.frame, NS.RegionDropDown.frame)
+NS.SpecDropDown = CreateFilterDropdown("Spec", 110, MMRTrackerGUI.frame, NS.CharDropDown.frame)
+NS.MapDropDown = CreateFilterDropdown("Map", 170, MMRTrackerGUI.frame, NS.SpecDropDown.frame)
+NS.TimeDropDown = CreateFilterDropdown("Time", 120, MMRTrackerGUI.frame, NS.MapDropDown.frame)
+
+-- Season dropdown (hidden by default, shown when "Select Season" is chosen)
+NS.SeasonDropDown = CreateFilterDropdown("Season", 100, MMRTrackerGUI.frame, NS.TimeDropDown.frame)
+NS.SeasonDropDown.frame:Hide()
+
+NS.RegionDropDown:SetCallback("OnValueChanged", function(_, _, value)
+  if NS.refreshing then
+    return
+  end
+  NS.filters.region = value
+  NS.RefreshFilters()
+end)
+
+NS.CharDropDown:SetCallback("OnValueChanged", function(_, _, value)
+  if NS.refreshing then
+    return
+  end
+  NS.filters.character = value
+  NS.RefreshFilters()
+end)
+
+NS.SpecDropDown:SetCallback("OnValueChanged", function(_, _, value)
+  if NS.refreshing then
+    return
+  end
+  NS.filters.spec = value
+  NS.RefreshFilters()
+end)
+
+NS.MapDropDown:SetCallback("OnValueChanged", function(_, _, value)
+  if NS.refreshing then
+    return
+  end
+  NS.filters.map = value
+  NS.RefreshFilters()
+end)
+
+NS.TimeDropDown:SetCallback("OnValueChanged", function(_, _, value)
+  if NS.refreshing then
+    return
+  end
+  NS.filters.time = value
+  if value == 8 then -- Select Season
+    NS.filters.selectedSeason = NS.season
+    NS.SeasonDropDown.frame:Show()
+    NS.RefreshFilters()
+    return
+  end
+  if value == 9 then -- Custom Range
+    NS.SeasonDropDown.frame:Hide()
+    NS.CalendarMode = 1
+    StaticPopup_Show("MMRTRACKER_CUSTOMDATE")
+    UIParentLoadAddOn("Blizzard_Calendar")
+    CalendarFrame:Show()
+    return
+  end
+  NS.SeasonDropDown.frame:Hide()
+  NS.filters.customStart = 0
+  NS.filters.customEnd = 0
+  NS.RefreshFilters()
+end)
+
+NS.SeasonDropDown:SetCallback("OnValueChanged", function(_, _, value)
+  if NS.refreshing then
+    return
+  end
+  NS.filters.selectedSeason = value
+  NS.RefreshFilters()
+end)
+
+-- StaticPopup for custom date picker
+StaticPopupDialogs["MMRTRACKER_CUSTOMDATE"] = {
+  text = "Select start and end date by clicking it.",
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = false,
+}
+
+-- Master refresh function (faceted)
+NS.RefreshFilters = function()
+  NS.refreshing = true
+
+  NS.allRows = NS.UpdateTable()
+  NS.DataTable:SetData(NS.allRows, true)
+
+  -- Rebuild all dropdown lists using faceted logic
+  local regionList, regionOrder = NS.BuildRegionList(NS.allRows)
+  NS.RegionDropDown:SetList(regionList, regionOrder)
+  if not regionList[NS.filters.region] then
+    NS.filters.region = "All"
+  end
+  NS.RegionDropDown:SetValue(NS.filters.region)
+
+  local charList, charOrder = NS.BuildCharacterList(NS.allRows)
+  NS.CharDropDown:SetList(charList, charOrder)
+  if not charList[NS.filters.character] then
+    NS.filters.character = "All"
+  end
+  NS.CharDropDown:SetValue(NS.filters.character)
+
+  local specList, specOrder = NS.BuildSpecList(NS.allRows)
+  NS.SpecDropDown:SetList(specList, specOrder)
+  if not specList[NS.filters.spec] then
+    NS.filters.spec = "All"
+  end
+  NS.SpecDropDown:SetValue(NS.filters.spec)
+
+  local mapList, mapOrder = NS.BuildMapList(NS.allRows)
+  NS.MapDropDown:SetList(mapList, mapOrder)
+  if not mapList[NS.filters.map] then
+    NS.filters.map = "All"
+  end
+  NS.MapDropDown:SetValue(NS.filters.map)
+
+  -- Rebuild season dropdown when in "Select Season" mode
+  if NS.filters.time == 8 then
+    local seasonList, seasonOrder = NS.BuildSeasonList(NS.allRows)
+    NS.SeasonDropDown:SetList(seasonList, seasonOrder)
+    if not seasonList[NS.filters.selectedSeason] then
+      -- Selected season no longer in filtered data, pick first available
+      NS.filters.selectedSeason = seasonOrder[1] or 0
+    end
+    NS.SeasonDropDown:SetValue(NS.filters.selectedSeason)
+  end
+
+  NS.refreshing = false
+
+  -- Apply filter + force visual refresh
+  NS.DataTable:SetFilter(NS.TableFilter)
+  NS.DataTable:Hide()
+  NS.DataTable:Show()
+
+  -- Update status text
+  NS.UpdateStatusText()
+end
+
+NS.UpdateStatusText = function()
+  local bracket = NS.filters.tab and NS.TRACKED_BRACKETS[NS.filters.tab] or "All Brackets"
+  local spec = NS.filters.spec ~= "All" and NS.filters.spec or "All Specs"
+  local char = NS.filters.character ~= "All" and NS.filters.character or "All Characters"
+  local region = NS.filters.region ~= "All" and NS.filters.region or "All Regions"
+
+  local mode = NS.filters.time
+  local timeStr
+  if mode == 1 then
+    timeStr = "All Time"
+  elseif mode == 2 then
+    timeStr = "Today"
+  elseif mode == 3 then
+    timeStr = "Yesterday"
+  elseif mode == 4 then
+    timeStr = "This Week"
+  elseif mode == 5 then
+    timeStr = "This Month"
+  elseif mode == 6 then
+    timeStr = "This Season"
+  elseif mode == 7 then
+    timeStr = "Prev. Season"
+  elseif mode == 8 then
+    if NS.filters.selectedSeason == "All" then
+      timeStr = "All Seasons"
+    else
+      timeStr = NS.SEASON_NAMES[NS.filters.selectedSeason] or ("Season " .. NS.filters.selectedSeason)
+    end
+  elseif mode == 9 then
+    local s, e = NS.filters.customStart, NS.filters.customEnd
+    if s > 0 and e > 0 then
+      timeStr = date("%m/%d/%y", s) .. "-" .. date("%m/%d/%y", e)
+    elseif s > 0 then
+      timeStr = date("%m/%d/%y", s) .. "+"
+    else
+      timeStr = "Custom Range"
+    end
+  else
+    timeStr = "Unknown"
+  end
+
+  MMRTrackerGUI:SetStatusText(sformat("Viewing: %s, %s, %s, %s, %s.", region, char, spec, bracket, timeStr))
+end
 
 local MMRTracker = {}
 NS.MMRTracker = MMRTracker
@@ -640,8 +864,7 @@ function MMRTracker:PLAYER_ENTERING_WORLD()
   NS.DataTable.frame:ClearAllPoints()
   NS.DataTable.frame:SetPoint("TOP", SimpleGroup.frame, "TOP", 0, -20)
 
-  local rows = NS.UpdateTable()
-  NS.DataTable:SetData(rows, true)
+  NS.RefreshFilters()
 
   if MMRTrackerFrame.instanceType == "none" then
     toggleVisibilityInQueue()
@@ -680,6 +903,16 @@ function MMRTracker:PLAYER_LOGIN()
 
   NS.Interface:CreateInterface()
 
+  -- Initialize filter defaults
+  NS.filters.region = NS.playerInfo.region
+  NS.filters.character = NS.playerInfo.name
+  NS.filters.spec = NS.playerInfo.spec
+  NS.filters.time = 6 -- "This Season"
+
+  -- Populate time dropdown (static, never changes)
+  NS.TimeDropDown:SetList(NS.TIME_FILTERS, NS.TIME_FILTER_ORDER)
+  NS.TimeDropDown:SetValue(NS.filters.time)
+
   MMRTrackerFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
   MMRTrackerFrame:RegisterEvent("PLAYER_LEAVING_WORLD")
   MMRTrackerFrame:RegisterEvent("LOADING_SCREEN_ENABLED")
@@ -707,8 +940,7 @@ function NS.OnDbChanged()
 
   NS.DisplayBracketData()
 
-  local rows = NS.UpdateTable()
-  NS.DataTable:SetData(rows, true)
+  NS.RefreshFilters()
 
   if NS.db.global.lock then
     NS.Interface:Lock(NS.Interface.textFrame)
@@ -782,15 +1014,13 @@ end
 
 function MMRTracker:ADDON_LOADED(addon)
   if addon == AddonName then
-    MMRTrackerFrame:UnregisterEvent("ADDON_LOADED")
-
     MMRTrackerDB = MMRTrackerDB and next(MMRTrackerDB) ~= nil and MMRTrackerDB or {}
 
     -- Copy any settings from default if they don't exist in current profile
     NS.CopyDefaults(NS.DefaultDatabase, MMRTrackerDB)
 
     -- Migrate old data with no seasons to now have seasons
-    NS.MigrateDB(MMRTrackerDB)
+    -- NS.MigrateDB(MMRTrackerDB)
 
     -- Reference to active db profile
     -- Always use this directly or reference will be invalid
@@ -800,6 +1030,10 @@ function MMRTracker:ADDON_LOADED(addon)
     NS.CleanupDB(MMRTrackerDB, NS.DefaultDatabase)
 
     NS.Options_Setup()
+  elseif addon == "Blizzard_Calendar" then
+    hooksecurefunc("CalendarDayButton_Click", NS.CalendarParser)
+    CalendarFrame:HookScript("OnHide", NS.CalendarCleanup)
+    MMRTrackerFrame:UnregisterEvent("ADDON_LOADED")
   end
 end
 MMRTrackerFrame:RegisterEvent("ADDON_LOADED")

@@ -18,6 +18,7 @@ local mfloor = math.floor
 local slower = string.lower
 
 local CompareCalendarTime = C_DateAndTime.CompareCalendarTime
+local GetSecondsUntilWeeklyReset = C_DateAndTime.GetSecondsUntilWeeklyReset
 
 local SharedMedia = LibStub("LibSharedMedia-3.0")
 local ScrollingTable = LibStub("ScrollingTable")
@@ -141,111 +142,111 @@ local function parseDate(time, region)
   }
 end
 
-local function checkCutOffTime(gameTime, cutOffTime)
-  local isBeforeYear = gameTime.year < cutOffTime.year
-  local isBeforeMonth = gameTime.month < cutOffTime.month
-  local isBeforeDay = gameTime.monthDay < cutOffTime.monthDay
-  local isBeforeHour = gameTime.hour < cutOffTime.hour
-  local isBeforeMinute = gameTime.minute < cutOffTime.minute
+-- local function checkCutOffTime(gameTime, cutOffTime)
+--   local isBeforeYear = gameTime.year < cutOffTime.year
+--   local isBeforeMonth = gameTime.month < cutOffTime.month
+--   local isBeforeDay = gameTime.monthDay < cutOffTime.monthDay
+--   local isBeforeHour = gameTime.hour < cutOffTime.hour
+--   local isBeforeMinute = gameTime.minute < cutOffTime.minute
 
-  local isSameYear = gameTime.year == cutOffTime.year
-  local isSameMonth = gameTime.month == cutOffTime.month
-  local isSameDay = gameTime.monthDay == cutOffTime.monthDay
-  local isSameHour = gameTime.hour == cutOffTime.hour
-  -- local isSameMinute = gameTime.minute == cutOffTime.minute
+--   local isSameYear = gameTime.year == cutOffTime.year
+--   local isSameMonth = gameTime.month == cutOffTime.month
+--   local isSameDay = gameTime.monthDay == cutOffTime.monthDay
+--   local isSameHour = gameTime.hour == cutOffTime.hour
+--   -- local isSameMinute = gameTime.minute == cutOffTime.minute
 
-  return isBeforeYear
-    or (isSameYear and isBeforeMonth)
-    or (isSameYear and isSameMonth and isBeforeDay)
-    or (isSameYear and isSameMonth and isSameDay and isBeforeHour)
-    or (isSameYear and isSameMonth and isSameDay and isSameHour and isBeforeMinute)
-end
+--   return isBeforeYear
+--     or (isSameYear and isBeforeMonth)
+--     or (isSameYear and isSameMonth and isBeforeDay)
+--     or (isSameYear and isSameMonth and isSameDay and isBeforeHour)
+--     or (isSameYear and isSameMonth and isSameDay and isSameHour and isBeforeMinute)
+-- end
 
-NS.MigrateDB = function(db)
-  if db.migrated ~= nil and db.migrated == true then
-    return
-  end
+-- NS.MigrateDB = function(db)
+--   if db.migrated ~= nil and db.migrated == true then
+--     return
+--   end
 
-  local data = db.data
-  -- February 24, 2025, 10:05 PM PST
-  -- this is the end of the first season for the addon
-  local firstSeasonCutOffTime = {
-    ["monthDay"] = 24,
-    ["weekday"] = 2,
-    ["month"] = 2,
-    ["year"] = 2025,
-    ["hour"] = 22,
-    ["minute"] = 5,
-  }
-  -- March 4, 2025, 3:00 PM PST
-  -- this is the end of the first post season for the addon
-  local noSeasonCutOffTime = {
-    ["monthDay"] = 4,
-    ["weekday"] = 3,
-    ["month"] = 3,
-    ["year"] = 2025,
-    ["hour"] = 15,
-    ["minute"] = 0,
-  }
+--   local data = db.data
+--   -- February 24, 2025, 10:05 PM PST
+--   -- this is the end of the first season for the addon
+--   local firstSeasonCutOffTime = {
+--     ["monthDay"] = 24,
+--     ["weekday"] = 2,
+--     ["month"] = 2,
+--     ["year"] = 2025,
+--     ["hour"] = 22,
+--     ["minute"] = 5,
+--   }
+--   -- March 4, 2025, 3:00 PM PST
+--   -- this is the end of the first post season for the addon
+--   local noSeasonCutOffTime = {
+--     ["monthDay"] = 4,
+--     ["weekday"] = 3,
+--     ["month"] = 3,
+--     ["year"] = 2025,
+--     ["hour"] = 15,
+--     ["minute"] = 0,
+--   }
 
-  -- Iterate over regions
-  for region, players in pairs(data) do
-    -- Iterate over player names
-    for player, playerData in pairs(players) do
-      -- Add season to lastGame if it exists and doesn't already have it
-      if playerData.lastGame then
-        if playerData.lastGame.season == nil then
-          if checkCutOffTime(playerData.lastGame.gameTime, firstSeasonCutOffTime) then
-            playerData.lastGame.season = 38
-          elseif checkCutOffTime(playerData.lastGame.gameTime, noSeasonCutOffTime) then
-            playerData.lastGame.season = 0
-          else
-            playerData.lastGame.season = NS.season
-          end
-        end
-      end
-      -- Iterate over brackets
-      for bracket, games in pairs(playerData) do
-        -- Handle brackets with specs (e.g. '6' and '8')
-        if bracket == "8" or bracket == "6" then
-          -- spec, games
-          for spec, specGames in pairs(games) do
-            -- index, gameInfo
-            for _, game in ipairs(specGames) do
-              if game.season == nil then
-                if checkCutOffTime(game.gameTime, firstSeasonCutOffTime) then
-                  game.season = 38
-                elseif checkCutOffTime(game.gameTime, noSeasonCutOffTime) then
-                  game.season = 0
-                else
-                  game.season = NS.season
-                end
-              end
-            end
-          end
-        elseif bracket == "0" or bracket == "1" or bracket == "3" then
-          -- Handle brackets without specs (e.g. '0', '1', '3')
-          -- index, gameInfo
-          for _, game in ipairs(games) do
-            if game.season == nil then
-              if checkCutOffTime(game.gameTime, firstSeasonCutOffTime) then
-                game.season = 38
-              elseif checkCutOffTime(game.gameTime, noSeasonCutOffTime) then
-                game.season = 0
-              else
-                game.season = NS.season
-              end
-            end
-          end
-        end
-      end
-    end
-  end
+--   -- Iterate over regions
+--   for region, players in pairs(data) do
+--     -- Iterate over player names
+--     for player, playerData in pairs(players) do
+--       -- Add season to lastGame if it exists and doesn't already have it
+--       if playerData.lastGame then
+--         if playerData.lastGame.season == nil then
+--           if checkCutOffTime(playerData.lastGame.gameTime, firstSeasonCutOffTime) then
+--             playerData.lastGame.season = 38
+--           elseif checkCutOffTime(playerData.lastGame.gameTime, noSeasonCutOffTime) then
+--             playerData.lastGame.season = 0
+--           else
+--             playerData.lastGame.season = NS.season
+--           end
+--         end
+--       end
+--       -- Iterate over brackets
+--       for bracket, games in pairs(playerData) do
+--         -- Handle brackets with specs (e.g. '6' and '8')
+--         if bracket == "8" or bracket == "6" then
+--           -- spec, games
+--           for spec, specGames in pairs(games) do
+--             -- index, gameInfo
+--             for _, game in ipairs(specGames) do
+--               if game.season == nil then
+--                 if checkCutOffTime(game.gameTime, firstSeasonCutOffTime) then
+--                   game.season = 38
+--                 elseif checkCutOffTime(game.gameTime, noSeasonCutOffTime) then
+--                   game.season = 0
+--                 else
+--                   game.season = NS.season
+--                 end
+--               end
+--             end
+--           end
+--         elseif bracket == "0" or bracket == "1" or bracket == "3" then
+--           -- Handle brackets without specs (e.g. '0', '1', '3')
+--           -- index, gameInfo
+--           for _, game in ipairs(games) do
+--             if game.season == nil then
+--               if checkCutOffTime(game.gameTime, firstSeasonCutOffTime) then
+--                 game.season = 38
+--               elseif checkCutOffTime(game.gameTime, noSeasonCutOffTime) then
+--                 game.season = 0
+--               else
+--                 game.season = NS.season
+--               end
+--             end
+--           end
+--         end
+--       end
+--     end
+--   end
 
-  -- Replace the old spells table with the updated one
-  -- db.data = data
-  db.migrated = true
-end
+--   -- Replace the old spells table with the updated one
+--   -- db.data = data
+--   db.migrated = true
+-- end
 
 -- Function to filter games by the current season
 NS.filterBySeason = function(data)
@@ -290,38 +291,35 @@ NS.CustomSort = function(_data, _rowA, _rowB, _sortByColumn)
   end
 end
 
--- Utility function to flatten all games into a single array
-NS.FlattenAllGames = function(playerInfo)
+-- Utility function to flatten all games into a single array (all regions, all characters)
+NS.FlattenAllGames = function()
   local allGames = {}
 
-  -- Ensure the top-level data structure exists
-  if NS.db and NS.db.data then
-    -- Iterate over regions
-    for region, regionData in pairs(NS.db.data) do
-      -- Skip regions that don't match the player's region
-      if region == playerInfo.region then
-        -- Iterate over player names
-        for playerName, playerData in pairs(regionData) do
-          -- Skip players that don't match the player's name
-          if playerName == playerInfo.name then
-            -- Iterate over brackets
-            for bracket, bracketData in pairs(playerData) do
-              -- Handle brackets with specs (e.g., '6' and '8')
-              if bracket == "6" or bracket == "8" then
-                -- spec, games
-                for spec, games in pairs(bracketData) do
-                  -- index, gameInfo
-                  for index, game in ipairs(games) do
-                    tinsert(allGames, game)
-                  end
-                end
-              elseif bracket == "0" or bracket == "1" or bracket == "3" then
-                -- Handle brackets without specs (e.g., '0', '1', '3')
-                -- index, gameInfo
-                for _, game in ipairs(bracketData) do
+  if not NS.db or not NS.db.data then
+    return allGames
+  end
+
+  for region, regionData in pairs(NS.db.data) do
+    for charName, playerData in pairs(regionData) do
+      if type(playerData) == "table" then
+        for bracket, bracketData in pairs(playerData) do
+          -- Shuffle and Blitz have an extra spec nesting level
+          if bracket == "6" or bracket == "8" then
+            for _, games in pairs(bracketData) do
+              if type(games) == "table" then
+                for _, game in ipairs(games) do
+                  game._region = region
+                  game._character = charName
                   tinsert(allGames, game)
                 end
               end
+            end
+          elseif bracket == "0" or bracket == "1" or bracket == "3" then
+            -- 2v2, 3v3, RBG have games directly at the bracket level
+            for _, game in ipairs(bracketData) do
+              game._region = region
+              game._character = charName
+              tinsert(allGames, game)
             end
           end
         end
@@ -329,11 +327,7 @@ NS.FlattenAllGames = function(playerInfo)
     end
   end
 
-  -- Filter out games that don't match the current season
-  allGames = NS.filterBySeason(allGames)
-
-  -- Sort the data table using the parsed date and time
-  NS.sortByDate(allGames, playerInfo.region)
+  NS.sortByDate(allGames, NS.playerInfo.region)
 
   return allGames
 end
@@ -500,7 +494,7 @@ NS.DisplayBracketData = function()
 end
 
 NS.UpdateTable = function()
-  local allGames = NS.FlattenAllGames(NS.playerInfo)
+  local allGames = NS.FlattenAllGames()
   -- if next(MMRTrackerFrame.lastGame) ~= nil then
   --   tinsert(allGames, MMRTrackerFrame.lastGame)
   --   NS.sortByDate(allGames, NS.playerInfo.region)
@@ -565,10 +559,258 @@ NS.UpdateTable = function()
       postMathValue,
       gameInfo.winner == nil and "-" or (shuffleBracket and (roundsWonColor .. roundsWon .. "/6" .. "|r") or winIcon),
       gameInfo.time,
+      tonumber(gameInfo.bracket), -- [11] bracket key number
+      gameInfo.spec, -- [12] raw spec name
+      gameInfo.season or NS.NO_SEASON, -- [13] season number (-1 if nil)
+      gameInfo._region, -- [14] region string
+      gameInfo._character, -- [15] character name
     })
   end
 
   return rows
+end
+
+-- ScrollingTable filter function — checks all 6 filter dimensions
+NS.TableFilter = function(_, rowdata)
+  if NS.filters.region ~= "All" then
+    if rowdata[14] ~= NS.filters.region then
+      return false
+    end
+  end
+  if NS.filters.character ~= "All" then
+    if rowdata[15] ~= NS.filters.character then
+      return false
+    end
+  end
+  if NS.filters.tab ~= nil then
+    if rowdata[11] ~= NS.filters.tab then
+      return false
+    end
+  end
+  if NS.filters.spec ~= "All" then
+    if rowdata[12] ~= NS.filters.spec then
+      return false
+    end
+  end
+  if NS.filters.map ~= "All" then
+    if rowdata[2] ~= NS.filters.map then
+      return false
+    end
+  end
+  if not NS.PassesTimeFilter(rowdata[10], rowdata[13]) then
+    return false
+  end
+  return true
+end
+
+-- Time helpers
+NS.ParseUTCTimestamp = function(month)
+  local d1 = date("*t")
+  local d2 = date("!*t")
+  d2.isdst = d1.isdst
+  if month then
+    return time(d2) - (86400 * (d2.day - 1)) - (3600 * d2.hour) - (60 * d2.min) - d2.sec
+  else
+    return time(d2) - (3600 * d2.hour) - (60 * d2.min) - d2.sec
+  end
+end
+
+NS.GetPreviousWeeklyReset = function()
+  return 604800 - GetSecondsUntilWeeklyReset()
+end
+
+NS.PassesTimeFilter = function(rawTime, season)
+  local mode = NS.filters.time
+  if mode == 1 then
+    return true
+  end -- All
+  if mode == 2 then
+    return rawTime >= NS.ParseUTCTimestamp()
+  end -- Today
+  if mode == 3 then -- Yesterday
+    local todayStart = NS.ParseUTCTimestamp()
+    return rawTime >= (todayStart - 86400) and rawTime < todayStart
+  end
+  if mode == 4 then -- This Week
+    local utcNow = NS.GetUTCTimestamp()
+    return rawTime >= (utcNow - NS.GetPreviousWeeklyReset())
+  end
+  if mode == 5 then
+    return rawTime >= NS.ParseUTCTimestamp(true)
+  end -- This Month
+  if mode == 6 then -- This Season (use API value if active, otherwise static fallback)
+    local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
+    return season == currentSeason
+  end
+  if mode == 7 then -- Prev. Season
+    local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
+    return season == (currentSeason - 1)
+  end
+  if mode == 8 then -- Select Season
+    if NS.filters.selectedSeason == "All" then
+      return true
+    end
+    return season == NS.filters.selectedSeason
+  end
+  if mode == 9 then -- Custom Range
+    local from, to = NS.filters.customStart, NS.filters.customEnd
+    if from > 0 or to > 0 then
+      return rawTime >= from and (to == 0 or rawTime <= to)
+    end
+    return true
+  end
+  return true
+end
+
+-- Calendar hook for custom date range
+NS.CalendarParser = function()
+  if NS.CalendarMode == 1 then
+    local t = {
+      day = CalendarFrame.selectedDay,
+      month = CalendarFrame.selectedMonth,
+      year = CalendarFrame.selectedYear,
+      hour = 0,
+    }
+    PlaySound(624)
+    NS.filters.customStart = time(t) - (NS.Timezone * 3600)
+    NS.CalendarMode = 2
+  elseif NS.CalendarMode == 2 then
+    local t = {
+      day = CalendarFrame.selectedDay,
+      month = CalendarFrame.selectedMonth,
+      year = CalendarFrame.selectedYear,
+      hour = 23,
+      min = 59,
+      sec = 59,
+    }
+    PlaySound(624)
+    NS.filters.customEnd = time(t) - (NS.Timezone * 3600)
+    CalendarFrame:Hide()
+    NS.RefreshFilters()
+  end
+end
+
+NS.CalendarCleanup = function()
+  NS.CalendarMode = 0
+  StaticPopup_Hide("MMRTRACKER_CUSTOMDATE")
+end
+
+-- Faceted filter helpers
+-- Check if a row passes all filters EXCEPT the excluded one
+NS.RowPassesFilters = function(rowdata, exclude)
+  if exclude ~= "region" and NS.filters.region ~= "All" then
+    if rowdata[14] ~= NS.filters.region then
+      return false
+    end
+  end
+  if exclude ~= "character" and NS.filters.character ~= "All" then
+    if rowdata[15] ~= NS.filters.character then
+      return false
+    end
+  end
+  if exclude ~= "tab" and NS.filters.tab ~= nil then
+    if rowdata[11] ~= NS.filters.tab then
+      return false
+    end
+  end
+  if exclude ~= "spec" and NS.filters.spec ~= "All" then
+    if rowdata[12] ~= NS.filters.spec then
+      return false
+    end
+  end
+  if exclude ~= "map" and NS.filters.map ~= "All" then
+    if rowdata[2] ~= NS.filters.map then
+      return false
+    end
+  end
+  if exclude ~= "time" then
+    if not NS.PassesTimeFilter(rowdata[10], rowdata[13]) then
+      return false
+    end
+  end
+  return true
+end
+
+-- Build faceted dropdown list by scanning all rows with one filter excluded
+NS.BuildFacetedList = function(allRows, exclude, fieldIndex)
+  local list = { ["All"] = "All" }
+  local order = { "All" }
+  local seen = {}
+  for _, row in ipairs(allRows) do
+    if NS.RowPassesFilters(row, exclude) then
+      local value = row[fieldIndex]
+      if value and value ~= "" and not seen[value] then
+        seen[value] = true
+        list[value] = value
+        tinsert(order, value)
+      end
+    end
+  end
+  table.sort(order, function(a, b)
+    if a == "All" then
+      return true
+    end
+    if b == "All" then
+      return false
+    end
+    return a < b
+  end)
+  return list, order
+end
+
+NS.BuildRegionList = function(allRows)
+  return NS.BuildFacetedList(allRows, "region", 14)
+end
+
+NS.BuildCharacterList = function(allRows)
+  return NS.BuildFacetedList(allRows, "character", 15)
+end
+
+NS.BuildSpecList = function(allRows)
+  return NS.BuildFacetedList(allRows, "spec", 12)
+end
+
+NS.BuildMapList = function(allRows)
+  return NS.BuildFacetedList(allRows, "map", 2)
+end
+
+-- Build season dropdown list from data (faceted), using SEASON_NAMES for display labels
+NS.BuildSeasonList = function(allRows)
+  local list = { ["All"] = "All" }
+  local order = { "All" }
+  local seen = {}
+  for _, row in ipairs(allRows) do
+    if NS.RowPassesFilters(row, "time") then
+      local season = row[13]
+      if season and not seen[season] then
+        seen[season] = true
+        local label = NS.SEASON_NAMES[season] or ("Season " .. season)
+        list[season] = label
+        tinsert(order, season)
+      end
+    end
+  end
+  -- Sort seasons ascending; Off-Season (0) and No Season (-1) at the end
+  -- "All" stays first (not in the numeric sort)
+  table.sort(order, function(a, b)
+    if a == "All" then
+      return true
+    end
+    if b == "All" then
+      return false
+    end
+    if a <= 0 and b <= 0 then
+      return a > b
+    end -- 0 before -1
+    if a <= 0 then
+      return false
+    end
+    if b <= 0 then
+      return true
+    end
+    return a < b
+  end)
+  return list, order
 end
 
 -- Copies table values from src to dst if they don't exist in dst
