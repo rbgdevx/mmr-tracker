@@ -1,5 +1,10 @@
 # MMR Tracker
 
+## [v1.4.4](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.4) (2026-02-19)
+
+- Highest Rating on the "All" tab now includes Shuffle/Blitz ratings
+- Shuffle/Blitz tabs show "Highest Rating" instead of "Highest MMR" when the rating toggle is on
+
 ## [v1.4.3](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.3) (2026-02-19)
 
 - Added a summary header above the data table with three sections: Win Rate, Win-Loss, Highest Rating/MMR

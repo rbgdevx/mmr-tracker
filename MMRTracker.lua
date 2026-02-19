@@ -236,14 +236,26 @@ NS.UpdateSummaryHeader = function()
   -- Right: depends on bracket tab
   local tab = NS.filters.tab
   if tab == 6 or tab == 8 then
-    -- Shuffle or Blitz: show Highest MMR
-    headerRightLabel:SetText("Highest MMR")
-    headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
-    headerRightValue:SetTextColor(1, 1, 1, 1)
-    if stats.highestMMR then
-      headerRightValue:SetText(stats.highestMMR)
+    local showRating = (tab == 6 and NS.db.global.showShuffleRating) or (tab == 8 and NS.db.global.showBlitzRating)
+    if showRating then
+      -- Show Rating instead of MMR when the toggle is on
+      headerRightLabel:SetText("Highest Rating")
+      headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+      headerRightValue:SetTextColor(1, 1, 1, 1)
+      if stats.highestRating then
+        headerRightValue:SetText(stats.highestRating)
+      else
+        headerRightValue:SetText("N/A")
+      end
     else
-      headerRightValue:SetText("N/A")
+      headerRightLabel:SetText("Highest MMR")
+      headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+      headerRightValue:SetTextColor(1, 1, 1, 1)
+      if stats.highestMMR then
+        headerRightValue:SetText(stats.highestMMR)
+      else
+        headerRightValue:SetText("N/A")
+      end
     end
   elseif tab == 0 or tab == 1 or tab == 3 then
     -- 2v2, 3v3, RBG: show Highest Rating
@@ -258,7 +270,7 @@ NS.UpdateSummaryHeader = function()
   else
     -- All tab: show Rating/MMR
     headerRightLabel:SetText("Highest Rating/MMR")
-    local ratingStr = stats.highestRatingNonMMR and tostring(stats.highestRatingNonMMR) or "N/A"
+    local ratingStr = stats.highestRating and tostring(stats.highestRating) or "N/A"
     local mmrStr = stats.highestMMR and tostring(stats.highestMMR) or "N/A"
     headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
     headerRightValue:SetTextColor(1, 1, 1, 1)
