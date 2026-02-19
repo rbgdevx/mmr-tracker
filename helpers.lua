@@ -54,9 +54,13 @@ NS.SetTextFrameSize = function(frame, _lines)
   -- Set frame size based on calculated dimensions
   frame.textFrame:SetWidth(maxWidth)
   frame.textFrame:SetHeight(totalHeight)
-  -- local border = frame.textFrame:CreateTexture(nil, "BACKGROUND")
-  -- border:SetAllPoints(frame.textFrame)
-  -- border:SetColorTexture(0, 0, 0, 1) -- Black border with full opacity
+
+  -- Equalize line widths so JustifyH (LEFT/CENTER/RIGHT) takes effect
+  for _, textFrame in pairs(_lines) do
+    if textFrame and textFrame:GetAlpha() > 0 then
+      textFrame:SetWidth(maxWidth)
+    end
+  end
 end
 
 NS.GetSpecIcon = function(classToken, specName)
@@ -332,6 +336,24 @@ NS.FlattenAllGames = function()
   return allGames
 end
 
+-- Determine the tracking type label based on which brackets are enabled
+local getTrackingType = function()
+  local g = NS.db.global
+  local hasRating = g.show2v2
+    or g.show3v3
+    or g.showRBG
+    or (g.showShuffle and g.showShuffleRating)
+    or (g.showBlitz and g.showBlitzRating)
+  local hasMMR = (g.showShuffle and not g.showShuffleRating) or (g.showBlitz and not g.showBlitzRating)
+  if hasMMR and hasRating then
+    return "mmr/rating"
+  elseif hasMMR then
+    return "mmr"
+  else
+    return "rating"
+  end
+end
+
 -- Helper function to check if data exists
 local noDataAvailable = function()
   return not NS.db
@@ -347,7 +369,7 @@ NS.DisplayBracketData = function()
   -- Early exit if there is no data
   if noDataAvailable() then
     -- local noDataStr = sformat("%s %s, %s", "No data for", NS.playerInfo.name, NS.playerInfo.region)
-    local noDataStr = sformat("Play a game to start tracking mmr")
+    local noDataStr = sformat("Play a game to start tracking %s", getTrackingType())
     NS.Interface:AddText(NS.Interface, noDataStr, 0, "none", false)
     return
   end
@@ -468,7 +490,7 @@ NS.DisplayBracketData = function()
     end
   else
     -- local noDataStr = sformat("%s %s, %s", "No data for", NS.playerInfo.name, NS.playerInfo.region)
-    local noDataStr = sformat("Play a game to start tracking mmr")
+    local noDataStr = sformat("Play a game to start tracking %s", getTrackingType())
     NS.Interface:AddText(NS.Interface, noDataStr, 0, "none", false)
 
     for _, textFrame in pairs(NS.lines) do
@@ -548,6 +570,19 @@ NS.UpdateTable = function()
     end
     local dateString = NS.DateFormat(gameInfo.time, NS.Timezone, NS.playerInfo.region)
 
+    -- Win determination for hidden metadata
+    local isWin = nil
+    if shuffleBracket then
+      -- Shuffle: 4+ rounds = win, 0-2 = loss, 3 = excluded (nil)
+      if roundsWon >= 4 then
+        isWin = true
+      elseif roundsWon <= 2 then
+        isWin = false
+      end
+    elseif gameInfo.winner ~= nil then
+      isWin = (gameInfo.winner == gameInfo.faction)
+    end
+
     tinsert(rows, {
       dateString,
       gameInfo.mapName,
@@ -564,10 +599,118 @@ NS.UpdateTable = function()
       gameInfo.season or NS.NO_SEASON, -- [13] season number (-1 if nil)
       gameInfo._region, -- [14] region string
       gameInfo._character, -- [15] character name
+      gameInfo.rating + gameInfo.ratingChange, -- [16] post-match rating (newRating)
+      gameInfo.postMatchMMR, -- [17] post-match MMR
+      isWin, -- [18] win boolean (nil = excluded from W-L)
     })
   end
 
   return rows
+end
+
+-- Compute summary stats for the header above the data table
+-- Left side (Highest Rating/MMR): bracket tab + character + region + spec (Shuffle/Blitz only)
+-- Center + Right (W-L, Streak): full NS.TableFilter
+NS.ComputeSummaryStats = function(allRows)
+  local highestRating = nil
+  local highestRatingNonMMR = nil -- highest rating from 2v2/3v3/RBG only (for "All" tab)
+  local highestMMR = nil
+  local wins = 0
+  local losses = 0
+  local streakCount = 0
+  local streakType = nil -- "W" or "L" or nil
+  local streakDetermined = false
+
+  for _, row in ipairs(allRows) do
+    local bracketNum = row[11]
+    local rowRegion = row[14]
+    local rowChar = row[15]
+    local rowSpec = row[12]
+    local newRating = row[16]
+    local postMatchMMR = row[17]
+    local isWin = row[18]
+
+    -- Left side: Highest Rating / MMR (bracket tab + character + region + spec for Shuffle/Blitz)
+    local passesLeftFilter = true
+    -- Check region
+    if NS.filters.region ~= "All" and rowRegion ~= NS.filters.region then
+      passesLeftFilter = false
+    end
+    -- Check character
+    if passesLeftFilter and NS.filters.character ~= "All" and rowChar ~= NS.filters.character then
+      passesLeftFilter = false
+    end
+    -- Check bracket tab
+    if passesLeftFilter and NS.filters.tab ~= nil and bracketNum ~= NS.filters.tab then
+      passesLeftFilter = false
+    end
+    -- Check spec (only for Shuffle/Blitz rows)
+    if passesLeftFilter and (bracketNum == 6 or bracketNum == 8) then
+      if NS.filters.spec ~= "All" and rowSpec ~= NS.filters.spec then
+        passesLeftFilter = false
+      end
+    end
+
+    if passesLeftFilter then
+      -- Highest Rating (all brackets)
+      if newRating and newRating >= 0 then
+        if not highestRating or newRating > highestRating then
+          highestRating = newRating
+        end
+        -- Highest Rating from non-MMR brackets only (2v2/3v3/RBG)
+        if bracketNum == 0 or bracketNum == 1 or bracketNum == 3 then
+          if not highestRatingNonMMR or newRating > highestRatingNonMMR then
+            highestRatingNonMMR = newRating
+          end
+        end
+      end
+      -- Highest MMR (Shuffle/Blitz only)
+      if (bracketNum == 6 or bracketNum == 8) and postMatchMMR and postMatchMMR >= 0 then
+        if not highestMMR or postMatchMMR > highestMMR then
+          highestMMR = postMatchMMR
+        end
+      end
+    end
+
+    -- Center + Right: W-L and Streak (full filter)
+    if NS.TableFilter(nil, row) then
+      if isWin == true then
+        wins = wins + 1
+      elseif isWin == false then
+        losses = losses + 1
+      end
+
+      -- Streak: walk chronologically (newest first in allRows) until direction changes
+      if not streakDetermined and isWin ~= nil then
+        if streakType == nil then
+          -- First game with a result sets the streak direction
+          streakType = isWin and "W" or "L"
+          streakCount = 1
+        elseif (streakType == "W" and isWin) or (streakType == "L" and not isWin) then
+          -- Same direction, extend streak
+          streakCount = streakCount + 1
+        else
+          -- Direction changed, streak is over
+          streakDetermined = true
+        end
+      end
+    end
+  end
+
+  -- If bracket tab is 2v2/3v3/RBG, MMR is N/A
+  if NS.filters.tab == 0 or NS.filters.tab == 1 or NS.filters.tab == 3 then
+    highestMMR = nil
+  end
+
+  return {
+    highestRating = highestRating,
+    highestRatingNonMMR = highestRatingNonMMR,
+    highestMMR = highestMMR,
+    wins = wins,
+    losses = losses,
+    streakCount = streakCount,
+    streakType = streakType,
+  }
 end
 
 -- ScrollingTable filter function — checks all 6 filter dimensions
@@ -624,35 +767,38 @@ NS.PassesTimeFilter = function(rawTime, season)
   if mode == 1 then
     return true
   end -- All
-  if mode == 2 then
+  if mode == 2 then -- Session
+    return NS.SessionStart and rawTime >= NS.SessionStart
+  end
+  if mode == 3 then
     return rawTime >= NS.ParseUTCTimestamp()
   end -- Today
-  if mode == 3 then -- Yesterday
+  if mode == 4 then -- Yesterday
     local todayStart = NS.ParseUTCTimestamp()
     return rawTime >= (todayStart - 86400) and rawTime < todayStart
   end
-  if mode == 4 then -- This Week
+  if mode == 5 then -- This Week
     local utcNow = NS.GetUTCTimestamp()
     return rawTime >= (utcNow - NS.GetPreviousWeeklyReset())
   end
-  if mode == 5 then
+  if mode == 6 then
     return rawTime >= NS.ParseUTCTimestamp(true)
   end -- This Month
-  if mode == 6 then -- This Season (use API value if active, otherwise static fallback)
+  if mode == 7 then -- This Season (use API value if active, otherwise static fallback)
     local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
     return season == currentSeason
   end
-  if mode == 7 then -- Prev. Season
+  if mode == 8 then -- Prev. Season
     local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
     return season == (currentSeason - 1)
   end
-  if mode == 8 then -- Select Season
+  if mode == 9 then -- Select Season
     if NS.filters.selectedSeason == "All" then
       return true
     end
     return season == NS.filters.selectedSeason
   end
-  if mode == 9 then -- Custom Range
+  if mode == 10 then -- Custom Range
     local from, to = NS.filters.customStart, NS.filters.customEnd
     if from > 0 or to > 0 then
       return rawTime >= from and (to == 0 or rawTime <= to)

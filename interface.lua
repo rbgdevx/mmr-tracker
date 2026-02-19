@@ -102,9 +102,12 @@ function Interface:CreateInterface()
 end
 
 -- New UpdateAnchors function to dynamically reposition visible text
+-- Uses two-point anchoring (LEFT+RIGHT) so each FontString spans the full
+-- parent width, which allows SetJustifyH (LEFT/CENTER/RIGHT) to take effect.
 function Interface:UpdateAnchors(frame, _lines)
   local anchor = frame.textFrame
   local firstVisible = nil
+  local growUp = NS.db and NS.db.global.growDirection == "UP"
 
   for _, textFrame in pairs(_lines) do
     local line = textFrame
@@ -113,11 +116,21 @@ function Interface:UpdateAnchors(frame, _lines)
 
       if not firstVisible then
         firstVisible = true
-        -- First visible line anchors to frame.textFrame
-        line:SetPoint("TOPLEFT", frame.textFrame, "TOPLEFT", 0, 0)
+        if growUp then
+          line:SetPoint("BOTTOMLEFT", frame.textFrame, "BOTTOMLEFT", 0, 0)
+          line:SetPoint("BOTTOMRIGHT", frame.textFrame, "BOTTOMRIGHT", 0, 0)
+        else
+          line:SetPoint("TOPLEFT", frame.textFrame, "TOPLEFT", 0, 0)
+          line:SetPoint("TOPRIGHT", frame.textFrame, "TOPRIGHT", 0, 0)
+        end
       else
-        -- Subsequent visible lines anchor to the previous visible line
-        line:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+        if growUp then
+          line:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", 0, 0)
+          line:SetPoint("BOTTOMRIGHT", anchor, "TOPRIGHT", 0, 0)
+        else
+          line:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+          line:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, 0)
+        end
       end
 
       -- Update anchor for the next visible line
@@ -133,7 +146,7 @@ function Interface:AddText(frame, text, key, bracket, hasData)
     local Text = frame.textFrame:CreateFontString(nil, "OVERLAY")
     Text:SetShadowOffset(0, 0)
     Text:SetShadowColor(0, 0, 0, 1)
-    Text:SetJustifyH("CENTER")
+    Text:SetJustifyH(NS.db.global.textAlignment or "CENTER")
     Text:SetJustifyV("MIDDLE")
     Text:SetTextColor(NS.db.global.color.r, NS.db.global.color.g, NS.db.global.color.b, NS.db.global.color.a)
     Text:SetFont(SharedMedia:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
@@ -142,9 +155,14 @@ function Interface:AddText(frame, text, key, bracket, hasData)
 
   local matchingText = lines[key]
 
-  -- Update the text color and font
+  -- Update the text color, font, and alignment
   matchingText:SetTextColor(NS.db.global.color.r, NS.db.global.color.g, NS.db.global.color.b, NS.db.global.color.a)
   matchingText:SetFont(SharedMedia:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
+  -- Force FontString state recalculation so SetJustifyH applies immediately
+  matchingText:GetRect()
+  matchingText:GetStringHeight()
+  matchingText:GetStringWidth()
+  matchingText:SetJustifyH(NS.db.global.textAlignment or "CENTER")
 
   -- Set visibility and alpha based on bracket type
   if hasData then
@@ -164,7 +182,12 @@ function Interface:AddText(frame, text, key, bracket, hasData)
   else
     local hideNoResults = NS.db.global.hideNoResults and 0 or 1
     if bracket == "none" then
-      matchingText:SetAlpha(1)
+      local anyBracketEnabled = NS.db.global.show2v2
+        or NS.db.global.show3v3
+        or NS.db.global.showRBG
+        or NS.db.global.showShuffle
+        or NS.db.global.showBlitz
+      matchingText:SetAlpha(anyBracketEnabled and 1 or 0)
     elseif bracket == "2v2" then
       matchingText:SetAlpha(NS.db.global.show2v2 and hideNoResults or 0)
     elseif bracket == "3v3" then

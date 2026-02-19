@@ -47,16 +47,17 @@ NS.TAB_LABELS = { "All", "2v2", "3v3", "RBG", "Shuffle", "Blitz" }
 -- Time filter modes
 NS.TIME_FILTERS = {
   [1] = "All",
-  [2] = "Today",
-  [3] = "Yesterday",
-  [4] = "This Week",
-  [5] = "This Month",
-  [6] = "This Season",
-  [7] = "Prev. Season",
-  [8] = "Select Season",
-  [9] = "Custom Range",
+  [2] = "Session",
+  [3] = "Today",
+  [4] = "Yesterday",
+  [5] = "This Week",
+  [6] = "This Month",
+  [7] = "This Season",
+  [8] = "Prev. Season",
+  [9] = "Select Season",
+  [10] = "Custom Range",
 }
-NS.TIME_FILTER_ORDER = { 1, 2, 3, 4, 5, 6, 7, 8, 9 }
+NS.TIME_FILTER_ORDER = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
 
 -- Runtime filter state (not persisted between sessions)
 NS.filters = {
@@ -65,7 +66,7 @@ NS.filters = {
   tab = nil, -- nil = all brackets, or bracket key number (0,1,3,6,8)
   spec = "All",
   map = "All",
-  time = 6, -- default: "This Season"
+  time = 7, -- default: "This Season"
   selectedSeason = 0, -- for "Select Season" mode
   customStart = 0,
   customEnd = 0,
@@ -179,6 +180,8 @@ NS.DefaultDatabase = {
     fontSize = 24,
     fontFamily = "Friz Quadrata TT",
     includeChange = false,
+    growDirection = "DOWN",
+    textAlignment = "LEFT",
     color = {
       r = 255 / 255,
       g = 255 / 255,

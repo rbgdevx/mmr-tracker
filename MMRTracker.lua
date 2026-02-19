@@ -60,8 +60,8 @@ NS.LDB.Icon = LibDBIcon
 
 local MMRTrackerGUI = AceGUI:Create("Frame")
 MMRTrackerGUI:SetLayout("Fill")
-MMRTrackerGUI:SetWidth(800)
-MMRTrackerGUI:SetHeight(600)
+MMRTrackerGUI:SetWidth(790)
+MMRTrackerGUI:SetHeight(625)
 MMRTrackerGUI:SetTitle(AddonName)
 MMRTrackerGUI:EnableResize(false)
 MMRTrackerGUI:Hide()
@@ -171,6 +171,101 @@ local DataTable = ScrollingTable:CreateST(columns, 22, 20, nil, SimpleGroup.fram
 DataTable:EnableSelection(true)
 NS.DataTable = DataTable
 
+-- Summary header above the data table
+local headerFrame = CreateFrame("Frame", "MMRTrackerHeader", SimpleGroup.frame)
+headerFrame:SetHeight(50)
+headerFrame:SetPoint("TOPLEFT", SimpleGroup.frame, "TOPLEFT", 10, -3)
+headerFrame:SetPoint("TOPRIGHT", SimpleGroup.frame, "TOPRIGHT", -10, -3)
+
+-- Left column: Win Rate
+local headerWinRateLabel = headerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+headerWinRateLabel:SetPoint("TOP", headerFrame, "TOPLEFT", 150, 0)
+headerWinRateLabel:SetText("Win Rate")
+
+local headerWinRateValue = headerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge2")
+headerWinRateValue:SetPoint("TOP", headerWinRateLabel, "BOTTOM", 0, -4)
+headerWinRateValue:SetTextColor(1, 1, 1, 1)
+headerWinRateValue:SetText("0%")
+
+-- Center column: Win - Loss
+local headerWLLabel = headerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+headerWLLabel:SetPoint("TOP", headerFrame, "TOP", 0, 0)
+headerWLLabel:SetText("W/L")
+
+local headerWLValue = headerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge3")
+headerWLValue:SetPoint("TOP", headerWLLabel, "BOTTOM", 0, -4)
+headerWLValue:SetText("0 - 0")
+
+-- Right column: Highest Rating/MMR (changes based on bracket tab)
+local headerRightLabel = headerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+headerRightLabel:SetPoint("TOP", headerFrame, "TOPRIGHT", -150, 0)
+headerRightLabel:SetText("Highest Rating/MMR")
+
+local headerRightValue = headerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge2")
+headerRightValue:SetPoint("TOP", headerRightLabel, "BOTTOM", 0, -4)
+headerRightValue:SetTextColor(1, 1, 1, 1)
+headerRightValue:SetText("N/A")
+
+NS.headerFrame = headerFrame
+NS.headerWinRateValue = headerWinRateValue
+NS.headerRightLabel = headerRightLabel
+NS.headerRightValue = headerRightValue
+NS.headerWLValue = headerWLValue
+
+NS.UpdateSummaryHeader = function()
+  if not NS.allRows then
+    return
+  end
+
+  local stats = NS.ComputeSummaryStats(NS.allRows)
+
+  -- Left: Win Rate
+  local total = stats.wins + stats.losses
+  if total > 0 then
+    local pct = math.floor((stats.wins / total) * 100 + 0.5)
+    headerWinRateValue:SetText(pct .. "%")
+  else
+    headerWinRateValue:SetText("0%")
+  end
+
+  -- Center: Win - Loss
+  local winsStr = "|cFF00FF00" .. stats.wins .. "|r"
+  local lossesStr = "|cFFFF0000" .. stats.losses .. "|r"
+  headerWLValue:SetText(winsStr .. " |cFFBBBBBB-|r " .. lossesStr)
+
+  -- Right: depends on bracket tab
+  local tab = NS.filters.tab
+  if tab == 6 or tab == 8 then
+    -- Shuffle or Blitz: show Highest MMR
+    headerRightLabel:SetText("Highest MMR")
+    headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+    headerRightValue:SetTextColor(1, 1, 1, 1)
+    if stats.highestMMR then
+      headerRightValue:SetText(stats.highestMMR)
+    else
+      headerRightValue:SetText("N/A")
+    end
+  elseif tab == 0 or tab == 1 or tab == 3 then
+    -- 2v2, 3v3, RBG: show Highest Rating
+    headerRightLabel:SetText("Highest Rating")
+    headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+    headerRightValue:SetTextColor(1, 1, 1, 1)
+    if stats.highestRating then
+      headerRightValue:SetText(stats.highestRating)
+    else
+      headerRightValue:SetText("N/A")
+    end
+  else
+    -- All tab: show Rating/MMR
+    headerRightLabel:SetText("Highest Rating/MMR")
+    local ratingStr = stats.highestRatingNonMMR and tostring(stats.highestRatingNonMMR) or "N/A"
+    local mmrStr = stats.highestMMR and tostring(stats.highestMMR) or "N/A"
+    headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+    headerRightValue:SetTextColor(1, 1, 1, 1)
+    headerRightValue:SetText(ratingStr .. " |cFFBBBBBB/|r " .. mmrStr)
+  end
+end
+
 -- Tabs: All, 2v2, 3v3, Shuffle, Blitz, RBG
 local tabFrame = CreateFrame("Frame", "MMRTrackerTabs", MMRTrackerGUI.frame)
 
@@ -210,7 +305,7 @@ local function CreateFilterDropdown(label, width, parent, anchorTo, _, offsetX, 
   return dropdown
 end
 
-NS.RegionDropDown = CreateFilterDropdown("Region", 65, MMRTrackerGUI.frame, nil, nil, 24, 55)
+NS.RegionDropDown = CreateFilterDropdown("Region", 65, MMRTrackerGUI.frame, nil, nil, 21, 42)
 NS.CharDropDown = CreateFilterDropdown("Character", 175, MMRTrackerGUI.frame, NS.RegionDropDown.frame)
 NS.SpecDropDown = CreateFilterDropdown("Spec", 110, MMRTrackerGUI.frame, NS.CharDropDown.frame)
 NS.MapDropDown = CreateFilterDropdown("Map", 170, MMRTrackerGUI.frame, NS.SpecDropDown.frame)
@@ -257,13 +352,21 @@ NS.TimeDropDown:SetCallback("OnValueChanged", function(_, _, value)
     return
   end
   NS.filters.time = value
-  if value == 8 then -- Select Season
+  -- Close calendar UI if leaving Custom Range
+  if NS.CalendarMode > 0 and value ~= 10 then
+    NS.CalendarMode = 0
+    StaticPopup_Hide("MMRTRACKER_CUSTOMDATE")
+    if CalendarFrame and CalendarFrame:IsShown() then
+      CalendarFrame:Hide()
+    end
+  end
+  if value == 9 then -- Select Season
     NS.filters.selectedSeason = NS.season
     NS.SeasonDropDown.frame:Show()
     NS.RefreshFilters()
     return
   end
-  if value == 9 then -- Custom Range
+  if value == 10 then -- Custom Range
     NS.SeasonDropDown.frame:Hide()
     NS.CalendarMode = 1
     StaticPopup_Show("MMRTRACKER_CUSTOMDATE")
@@ -330,7 +433,7 @@ NS.RefreshFilters = function()
   NS.MapDropDown:SetValue(NS.filters.map)
 
   -- Rebuild season dropdown when in "Select Season" mode
-  if NS.filters.time == 8 then
+  if NS.filters.time == 9 then
     local seasonList, seasonOrder = NS.BuildSeasonList(NS.allRows)
     NS.SeasonDropDown:SetList(seasonList, seasonOrder)
     if not seasonList[NS.filters.selectedSeason] then
@@ -347,8 +450,9 @@ NS.RefreshFilters = function()
   NS.DataTable:Hide()
   NS.DataTable:Show()
 
-  -- Update status text
+  -- Update status text and summary header
   NS.UpdateStatusText()
+  NS.UpdateSummaryHeader()
 end
 
 NS.UpdateStatusText = function()
@@ -362,24 +466,26 @@ NS.UpdateStatusText = function()
   if mode == 1 then
     timeStr = "All Time"
   elseif mode == 2 then
-    timeStr = "Today"
+    timeStr = "Session"
   elseif mode == 3 then
-    timeStr = "Yesterday"
+    timeStr = "Today"
   elseif mode == 4 then
-    timeStr = "This Week"
+    timeStr = "Yesterday"
   elseif mode == 5 then
-    timeStr = "This Month"
+    timeStr = "This Week"
   elseif mode == 6 then
-    timeStr = "This Season"
+    timeStr = "This Month"
   elseif mode == 7 then
-    timeStr = "Prev. Season"
+    timeStr = "This Season"
   elseif mode == 8 then
+    timeStr = "Prev. Season"
+  elseif mode == 9 then
     if NS.filters.selectedSeason == "All" then
       timeStr = "All Seasons"
     else
       timeStr = NS.SEASON_NAMES[NS.filters.selectedSeason] or ("Season " .. NS.filters.selectedSeason)
     end
-  elseif mode == 9 then
+  elseif mode == 10 then
     local s, e = NS.filters.customStart, NS.filters.customEnd
     if s > 0 and e > 0 then
       timeStr = date("%m/%d/%y", s) .. "-" .. date("%m/%d/%y", e)
@@ -862,7 +968,7 @@ function MMRTracker:PLAYER_ENTERING_WORLD()
   NS.DisplayBracketData()
 
   NS.DataTable.frame:ClearAllPoints()
-  NS.DataTable.frame:SetPoint("TOP", SimpleGroup.frame, "TOP", 0, -20)
+  NS.DataTable.frame:SetPoint("TOP", SimpleGroup.frame, "TOP", 0, -65)
 
   NS.RefreshFilters()
 
@@ -911,28 +1017,28 @@ function MMRTracker:PLAYER_LOGIN()
   local isActiveSeason = NS.season and NS.season > 0 and NS.SEASON_NAMES[NS.season]
 
   if isActiveSeason then
-    NS.filters.time = 6 -- "This Season"
+    NS.filters.time = 7 -- "This Season"
     NS.TimeDropDown:SetList(NS.TIME_FILTERS, NS.TIME_FILTER_ORDER)
-    NS.TimeDropDown:SetValue(6)
+    NS.TimeDropDown:SetValue(7)
   else
-    -- Hide "This Season" (6) and "Prev. Season" (7) during off-season
+    -- Hide "This Season" (7) and "Prev. Season" (8) during off-season
     local filteredList = {}
     local filteredOrder = {}
     for _, key in ipairs(NS.TIME_FILTER_ORDER) do
-      if key ~= 6 and key ~= 7 then
+      if key ~= 7 and key ~= 8 then
         filteredList[key] = NS.TIME_FILTERS[key]
         tinsert(filteredOrder, key)
       end
     end
     NS.TimeDropDown:SetList(filteredList, filteredOrder)
-    NS.filters.time = 8 -- "Select Season"
+    NS.filters.time = 9 -- "Select Season"
     -- API returned 0 → "Off-Season"; nil or unrecognized → "No Season"
     if NS.season == 0 then
       NS.filters.selectedSeason = 0
     else
       NS.filters.selectedSeason = NS.NO_SEASON -- -1
     end
-    NS.TimeDropDown:SetValue(8)
+    NS.TimeDropDown:SetValue(9)
     NS.SeasonDropDown.frame:Show()
   end
 

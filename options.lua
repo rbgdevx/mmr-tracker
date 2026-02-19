@@ -313,6 +313,37 @@ NS.AceConfig = {
           end,
         },
         spacer4 = { name = "", type = "description", order = 15 },
+        growDirection = {
+          name = "Grow Direction",
+          desc = "Direction the text lines stack from the anchor point.",
+          type = "select",
+          width = "normal",
+          order = 16,
+          values = { DOWN = "Down", UP = "Up" },
+          set = function(_, val)
+            NS.db.global.growDirection = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.growDirection
+          end,
+        },
+        textAlignment = {
+          name = "Text Alignment",
+          desc = "Horizontal alignment of the text lines.",
+          type = "select",
+          width = "normal",
+          order = 17,
+          values = { LEFT = "Left", CENTER = "Center", RIGHT = "Right" },
+          set = function(_, val)
+            NS.db.global.textAlignment = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.textAlignment
+          end,
+        },
+        spacer5 = { name = "", type = "description", order = 18 },
         reset = {
           name = "Reset Everything",
           type = "execute",

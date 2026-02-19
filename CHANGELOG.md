@@ -1,11 +1,24 @@
 # MMR Tracker
 
+## [v1.4.3](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.3) (2026-02-19)
+
+- Added a summary header above the data table with three sections: Win Rate, Win-Loss, Highest Rating/MMR
+- Added "Session" time filter (shows games played since login; resets on relog/reload)
+- Added "Grow Direction" option (Down/Up) — controls how text lines stack from the anchor point
+- Added "Text Alignment" option (Left/Center/Right) — controls horizontal alignment of text lines
+- Hiding no data text if all "show" features are disabled
+- Dynamically setting the no data text based on your "show" feature choices
+- Updating table feature sizes and positioning
+
 ## [v1.4.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.2) (2026-02-18)
 
 - Updated CURRENT_SEASON to reflect the correct current season
 - Added Midnight season names (MN S1, S2, S3) to the season lookup table
 - "This Season" and "Prev. Season" time filters are now hidden during off-season periods
 - Off-season defaults to "Select Season" with the appropriate season pre-selected
+
+## [v1.4.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.1) (2026-02-16)
+- adding config changes
 
 ## [v1.4.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.0) (2026-02-16)
 
