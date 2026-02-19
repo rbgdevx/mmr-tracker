@@ -1,6 +1,6 @@
 # MMR Tracker
 
-## [v1.4.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.1) (2026-02-18)
+## [v1.4.2](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.2) (2026-02-18)
 
 - Updated CURRENT_SEASON to reflect the correct current season
 - Added Midnight season names (MN S1, S2, S3) to the season lookup table
