@@ -1,5 +1,12 @@
 # MMR Tracker
 
+## [v1.4.1](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.1) (2026-02-18)
+
+- Updated CURRENT_SEASON to reflect the correct current season
+- Added Midnight season names (MN S1, S2, S3) to the season lookup table
+- "This Season" and "Prev. Season" time filters are now hidden during off-season periods
+- Off-season defaults to "Select Season" with the appropriate season pre-selected
+
 ## [v1.4.0](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.0) (2026-02-16)
 
 - Added bracket tabs (All, 2v2, 3v3, RBG, Shuffle, Blitz) for quick filtering

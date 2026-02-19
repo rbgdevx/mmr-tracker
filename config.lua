@@ -87,7 +87,7 @@ NS.season = GetCurrentArenaSeason and GetCurrentArenaSeason() or 0
 -- https://warcraft.wiki.gg/wiki/PvP_season#Seasons
 -- Static season lookup — update CURRENT_SEASON each time a new season starts
 -- During off-season (API returns 0), filters use CURRENT_SEASON as fallback
-NS.CURRENT_SEASON = 39 -- TWW S2 (most recent completed season)
+NS.CURRENT_SEASON = 41 -- MN S1
 NS.NO_SEASON = -1 -- sentinel for data with nil/missing season
 NS.SEASON_NAMES = {
   [-1] = "No Season",
@@ -132,6 +132,9 @@ NS.SEASON_NAMES = {
   [38] = "TWW S1",
   [39] = "TWW S2",
   [40] = "TWW S3",
+  [41] = "MN S1",
+  [42] = "MN S2",
+  [43] = "MN S3",
 }
 
 NS.CLASS_INFO = {}

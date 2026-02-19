@@ -907,11 +907,34 @@ function MMRTracker:PLAYER_LOGIN()
   NS.filters.region = NS.playerInfo.region
   NS.filters.character = NS.playerInfo.name
   NS.filters.spec = NS.playerInfo.spec
-  NS.filters.time = 6 -- "This Season"
+  -- Determine if we're in an active season (season > 0 AND recognized in SEASON_NAMES)
+  local isActiveSeason = NS.season and NS.season > 0 and NS.SEASON_NAMES[NS.season]
 
-  -- Populate time dropdown (static, never changes)
-  NS.TimeDropDown:SetList(NS.TIME_FILTERS, NS.TIME_FILTER_ORDER)
-  NS.TimeDropDown:SetValue(NS.filters.time)
+  if isActiveSeason then
+    NS.filters.time = 6 -- "This Season"
+    NS.TimeDropDown:SetList(NS.TIME_FILTERS, NS.TIME_FILTER_ORDER)
+    NS.TimeDropDown:SetValue(6)
+  else
+    -- Hide "This Season" (6) and "Prev. Season" (7) during off-season
+    local filteredList = {}
+    local filteredOrder = {}
+    for _, key in ipairs(NS.TIME_FILTER_ORDER) do
+      if key ~= 6 and key ~= 7 then
+        filteredList[key] = NS.TIME_FILTERS[key]
+        tinsert(filteredOrder, key)
+      end
+    end
+    NS.TimeDropDown:SetList(filteredList, filteredOrder)
+    NS.filters.time = 8 -- "Select Season"
+    -- API returned 0 → "Off-Season"; nil or unrecognized → "No Season"
+    if NS.season == 0 then
+      NS.filters.selectedSeason = 0
+    else
+      NS.filters.selectedSeason = NS.NO_SEASON -- -1
+    end
+    NS.TimeDropDown:SetValue(8)
+    NS.SeasonDropDown.frame:Show()
+  end
 
   MMRTrackerFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
   MMRTrackerFrame:RegisterEvent("PLAYER_LEAVING_WORLD")
