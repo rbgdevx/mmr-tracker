@@ -1,5 +1,12 @@
 # MMR Tracker
 
+## [v1.4.5](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.5) (2026-02-19)
+
+- Simplified date handling, time utility functions and sorting
+- Removed Custom Range filter
+- Cleaned up unused code and dependencies
+- Update libs
+
 ## [v1.4.4](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.4) (2026-02-19)
 
 - Highest Rating on the "All" tab now includes Shuffle/Blitz ratings

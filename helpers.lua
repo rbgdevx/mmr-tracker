@@ -9,15 +9,12 @@ local LibStub = LibStub
 local tostring = tostring
 local ipairs = ipairs
 local tonumber = tonumber
-local time = time
 local date = date
 
 local sformat = string.format
 local tinsert = table.insert
-local mfloor = math.floor
-local slower = string.lower
 
-local CompareCalendarTime = C_DateAndTime.CompareCalendarTime
+local GetServerTime = GetServerTime
 local GetSecondsUntilWeeklyReset = C_DateAndTime.GetSecondsUntilWeeklyReset
 
 local SharedMedia = LibStub("LibSharedMedia-3.0")
@@ -68,10 +65,6 @@ NS.GetSpecIcon = function(classToken, specName)
   return classData and classData[specName] and classData[specName].specIcon or nil
 end
 
-NS.GetClassIcon = function(classToken, size)
-  return "|A:classicon-" .. slower(classToken) .. ":" .. size .. ":" .. size .. "|a"
-end
-
 NS.DateFormat = function(timeRaw, timeZone, region)
   if region == "US" then
     return timeZone and date("%I:%M %p %m/%d/%y", timeRaw + (timeZone * 3600)) or date("%I:%M %p %m/%d/%y", timeRaw)
@@ -80,70 +73,20 @@ NS.DateFormat = function(timeRaw, timeZone, region)
   end
 end
 
--- US Format: 10:05 PM 05/07/25
--- EU Format: 22:05 07.05.25
-NS.DateClean = function(timeRaw, timeZone, region)
-  if region == "US" then
-    return timeZone and date("%I:%M %p %m/%d/%y", timeRaw + (timeZone * 3600)) or date("%I:%M %p %m/%d/%y", timeRaw)
-  else
-    return timeZone and date("%H:%M %d.%m.%y", timeRaw + (timeZone * 3600)) or date("%H:%M %d.%m.%y", timeRaw)
+NS.GetUTCTime = function(includeOffset)
+  local utcEpoch = GetServerTime()
+  if includeOffset then
+    local localHour = tonumber(date("%H"))
+    local utcHour = tonumber(date("!%H"))
+    local offset = localHour - utcHour
+    if offset > 12 then
+      offset = offset - 24
+    elseif offset < -12 then
+      offset = offset + 24
+    end
+    return utcEpoch, offset
   end
-end
-
-NS.Round = function(number, idp)
-  local multiplier = 10 ^ (idp or 0)
-  return mfloor(number * multiplier + 0.5) / multiplier
-end
-
-NS.GetUTCTimestamp = function(timezone)
-  local d1 = date("*t")
-  local d2 = date("!*t")
-  d2.isdst = d1.isdst
-  local utc = time(d2)
-  if timezone then
-    local player = time(d1)
-    return utc, NS.Round((player - utc) / 3600, 0)
-  else
-    return utc
-  end
-end
-
--- Helper function to convert date strings into sortable values
-local function parseDate(time, region)
-  local hour, minute, ampm, day, month, year
-
-  local dateString = NS.DateFormat(time, NS.Timezone, region)
-
-  if region == "US" then
-    hour, minute, ampm, month, day, year = dateString:match("(%d+):(%d+) (%a+) (%d+)/(%d+)/(%d+)")
-  else
-    hour, minute, day, month, year = dateString:match("(%d+):(%d+) (%d+).(%d+).(%d+)")
-    ampm = nil -- Already in 24-hour format
-  end
-
-  -- Convert string parts to numbers
-  hour = tonumber(hour)
-  minute = tonumber(minute)
-  day = tonumber(day)
-  month = tonumber(month)
-  year = tonumber(year) + 2000 -- Add 2000 to convert "YY" to "YYYY"
-
-  -- Convert to 24-hour time if needed
-  if ampm == "AM" and hour == 12 then
-    hour = 0
-  elseif ampm == "PM" and hour ~= 12 then
-    hour = hour + 12
-  end
-
-  -- Create a table to represent the date and time
-  return {
-    year = year,
-    month = month,
-    monthDay = day,
-    weekday = 1, -- Dummy value, not used for sorting
-    hour = hour,
-    minute = minute,
-  }
+  return utcEpoch
 end
 
 -- local function checkCutOffTime(gameTime, cutOffTime)
@@ -265,33 +208,27 @@ NS.filterBySeason = function(data)
   return filteredGames
 end
 
-NS.sortByDate = function(data, region)
-  -- Sort the data table using the parsed date and time
+NS.sortByDate = function(data)
   table.sort(data, function(a, b)
-    local dateA = parseDate(a.time, region)
-    local dateB = parseDate(b.time, region)
-    return CompareCalendarTime(dateA, dateB) < 0 -- Newest on top
+    return a.time > b.time -- Newest on top (raw UTC epoch comparison)
   end)
 end
 
-NS.CustomSort = function(_data, _rowA, _rowB, _sortByColumn)
+NS.SortDateColumn = function(_data, _rowA, _rowB, _sortByColumn)
   local column = _data.cols[_sortByColumn]
   local direction = column.sort or column.defaultsort or ScrollingTable.SORT_ASC
-  -- Use secret TIME field for date to normalize between region
-  local correctedSortByColumn = _sortByColumn == 1 and 10 or _sortByColumn
-  local rowA = _data.data[_rowA][correctedSortByColumn]
-  local rowB = _data.data[_rowB][correctedSortByColumn]
+
+  -- Column 1 (display date) maps to column 10 (raw UTC epoch) for numeric sorting
+  local epochColumn = _sortByColumn == 1 and 10 or _sortByColumn
+  local rowA = _data.data[_rowA][epochColumn]
+  local rowB = _data.data[_rowB][epochColumn]
+
   if rowA == rowB then
     return false
+  elseif ScrollingTable.SORT_DSC == direction then
+    return rowA > rowB
   else
-    local dateA = parseDate(rowA, NS.playerInfo.region)
-    local dateB = parseDate(rowB, NS.playerInfo.region)
-
-    if direction == ScrollingTable.SORT_ASC then
-      return CompareCalendarTime(dateA, dateB) > 0
-    else
-      return CompareCalendarTime(dateA, dateB) < 0
-    end
+    return rowA < rowB
   end
 end
 
@@ -331,7 +268,7 @@ NS.FlattenAllGames = function()
     end
   end
 
-  NS.sortByDate(allGames, NS.playerInfo.region)
+  NS.sortByDate(allGames)
 
   return allGames
 end
@@ -519,11 +456,11 @@ NS.UpdateTable = function()
   local allGames = NS.FlattenAllGames()
   -- if next(MMRTrackerFrame.lastGame) ~= nil then
   --   tinsert(allGames, MMRTrackerFrame.lastGame)
-  --   NS.sortByDate(allGames, NS.playerInfo.region)
+  --   NS.sortByDate(allGames)
   -- end
 
   -- if not NS.Timezone then
-  --   local _, tz = NS.GetUTCTimestamp(true)
+  --   local _, tz = NS.GetUTCTime(true)
   --   NS.Timezone = tz
   -- end
 
@@ -565,7 +502,6 @@ NS.UpdateTable = function()
     local specIcon = NS.GetSpecIcon(gameInfo.classToken, gameInfo.spec)
     local specInfo = "|c" .. classColors.colorStr .. gameInfo.spec .. "|r"
     if NS.db.global.showSpecIcon and specIcon then
-      -- NS.GetClassIcon(_gameInfo.classToken, 20),
       specInfo = "|T" .. specIcon .. ":20:20:0:0|t"
     end
     local dateString = NS.DateFormat(gameInfo.time, NS.Timezone, NS.playerInfo.region)
@@ -747,19 +683,18 @@ NS.TableFilter = function(_, rowdata)
 end
 
 -- Time helpers
-NS.ParseUTCTimestamp = function(month)
-  local d1 = date("*t")
-  local d2 = date("!*t")
-  d2.isdst = d1.isdst
-  if month then
-    return time(d2) - (86400 * (d2.day - 1)) - (3600 * d2.hour) - (60 * d2.min) - d2.sec
-  else
-    return time(d2) - (3600 * d2.hour) - (60 * d2.min) - d2.sec
+NS.GetUTCDayStart = function(startOfMonth)
+  local utcEpoch = GetServerTime()
+  local utc = date("!*t", utcEpoch)
+  local elapsed = utc.hour * 3600 + utc.min * 60 + utc.sec
+  if startOfMonth then
+    elapsed = elapsed + (utc.day - 1) * 86400
   end
+  return utcEpoch - elapsed
 end
 
-NS.GetPreviousWeeklyReset = function()
-  return 604800 - GetSecondsUntilWeeklyReset()
+NS.GetLastWeeklyResetTime = function()
+  return GetServerTime() - (604800 - GetSecondsUntilWeeklyReset())
 end
 
 NS.PassesTimeFilter = function(rawTime, season)
@@ -767,78 +702,37 @@ NS.PassesTimeFilter = function(rawTime, season)
   if mode == 1 then
     return true
   end -- All
-  if mode == 2 then -- Session
-    return NS.SessionStart and rawTime >= NS.SessionStart
-  end
-  if mode == 3 then
-    return rawTime >= NS.ParseUTCTimestamp()
+  if mode == 2 then
+    return rawTime >= NS.GetUTCDayStart()
   end -- Today
-  if mode == 4 then -- Yesterday
-    local todayStart = NS.ParseUTCTimestamp()
+  if mode == 3 then -- Yesterday
+    local todayStart = NS.GetUTCDayStart()
     return rawTime >= (todayStart - 86400) and rawTime < todayStart
   end
-  if mode == 5 then -- This Week
-    local utcNow = NS.GetUTCTimestamp()
-    return rawTime >= (utcNow - NS.GetPreviousWeeklyReset())
+  if mode == 4 then -- This Week
+    return rawTime >= NS.GetLastWeeklyResetTime()
   end
-  if mode == 6 then
-    return rawTime >= NS.ParseUTCTimestamp(true)
+  if mode == 5 then
+    return rawTime >= NS.GetUTCDayStart(true)
   end -- This Month
-  if mode == 7 then -- This Season (use API value if active, otherwise static fallback)
+  if mode == 6 then -- This Season (use API value if active, otherwise static fallback)
     local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
     return season == currentSeason
   end
-  if mode == 8 then -- Prev. Season
+  if mode == 7 then -- Prev. Season
     local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
     return season == (currentSeason - 1)
   end
-  if mode == 9 then -- Select Season
+  if mode == 8 then -- Select Season
     if NS.filters.selectedSeason == "All" then
       return true
     end
     return season == NS.filters.selectedSeason
   end
-  if mode == 10 then -- Custom Range
-    local from, to = NS.filters.customStart, NS.filters.customEnd
-    if from > 0 or to > 0 then
-      return rawTime >= from and (to == 0 or rawTime <= to)
-    end
-    return true
+  if mode == 9 then -- Current Session
+    return NS.CurrentSessionStartTime and rawTime >= NS.CurrentSessionStartTime
   end
   return true
-end
-
--- Calendar hook for custom date range
-NS.CalendarParser = function()
-  if NS.CalendarMode == 1 then
-    local t = {
-      day = CalendarFrame.selectedDay,
-      month = CalendarFrame.selectedMonth,
-      year = CalendarFrame.selectedYear,
-      hour = 0,
-    }
-    PlaySound(624)
-    NS.filters.customStart = time(t) - (NS.Timezone * 3600)
-    NS.CalendarMode = 2
-  elseif NS.CalendarMode == 2 then
-    local t = {
-      day = CalendarFrame.selectedDay,
-      month = CalendarFrame.selectedMonth,
-      year = CalendarFrame.selectedYear,
-      hour = 23,
-      min = 59,
-      sec = 59,
-    }
-    PlaySound(624)
-    NS.filters.customEnd = time(t) - (NS.Timezone * 3600)
-    CalendarFrame:Hide()
-    NS.RefreshFilters()
-  end
-end
-
-NS.CalendarCleanup = function()
-  NS.CalendarMode = 0
-  StaticPopup_Hide("MMRTRACKER_CUSTOMDATE")
 end
 
 -- Faceted filter helpers

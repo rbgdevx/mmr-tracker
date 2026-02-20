@@ -4,7 +4,6 @@ local CreateFrame = CreateFrame
 local IsInInstance = IsInInstance
 local UnitAffectingCombat = UnitAffectingCombat
 local UnitGUID = UnitGUID
-local UnitName = UnitName
 local UnitFullName = UnitFullName
 local SetBattlefieldScoreFaction = SetBattlefieldScoreFaction
 local GetBattlefieldTeamInfo = GetBattlefieldTeamInfo
@@ -18,10 +17,6 @@ local GetBattlefieldStatus = GetBattlefieldStatus
 local UnitClass = UnitClass
 local GetBattlefieldWinner = GetBattlefieldWinner
 local GetCurrentArenaSeason = GetCurrentArenaSeason
-local IsArenaSkirmish = IsArenaSkirmish
-local GetBattlefieldScore = GetBattlefieldScore
-local IsActiveBattlefieldArena = IsActiveBattlefieldArena
-local GetNumBattlefieldScores = GetNumBattlefieldScores
 
 local tinsert = table.insert
 local sformat = string.format
@@ -33,12 +28,6 @@ local IsRatedMap = C_PvP.IsRatedMap
 local GetGameAccountInfoByGUID = C_BattleNet.GetGameAccountInfoByGUID
 local GetCurrentCalendarTime = C_DateAndTime.GetCurrentCalendarTime
 local GetServerTimeLocal = C_DateAndTime.GetServerTimeLocal
-local IsRatedBattleground = C_PvP.IsRatedBattleground
-local IsSoloRBG = C_PvP.IsSoloRBG
-local IsRatedArena = C_PvP.IsRatedArena
-local IsSoloShuffle = C_PvP.IsSoloShuffle
-local IsRatedSoloShuffle = C_PvP.IsRatedSoloShuffle
-local IsInBrawl = C_PvP.IsInBrawl
 local GetActiveMatchDuration = C_PvP.GetActiveMatchDuration
 local GetSpecialization = C_SpecializationInfo.GetSpecialization
 local GetSpecializationInfo = C_SpecializationInfo.GetSpecializationInfo
@@ -54,14 +43,14 @@ NS.LDB = LibDataBroker
 NS.LDB.Config = LibDataBroker:NewDataObject(AddonName, {
   type = "data source",
   text = AddonName,
-  icon = "Interface\\PvPRankBadges\\PvPRank12", -- "Interface\\Icons\\UI_RankedPvP_07_Small",
+  icon = "Interface\\PvPRankBadges\\PvPRank12",
 })
 NS.LDB.Icon = LibDBIcon
 
 local MMRTrackerGUI = AceGUI:Create("Frame")
 MMRTrackerGUI:SetLayout("Fill")
-MMRTrackerGUI:SetWidth(790)
-MMRTrackerGUI:SetHeight(625)
+MMRTrackerGUI:SetWidth(800)
+MMRTrackerGUI:SetHeight(630)
 MMRTrackerGUI:SetTitle(AddonName)
 MMRTrackerGUI:EnableResize(false)
 MMRTrackerGUI:Hide()
@@ -78,13 +67,6 @@ SimpleGroup:SetFullHeight(true)
 SimpleGroup:SetFullWidth(true)
 MMRTrackerGUI:AddChild(SimpleGroup)
 
-local mapIDRemap = {
-  [968] = 566,
-  [998] = 1035,
-  [1681] = 2107,
-  [2197] = 30,
-}
-
 -- Date -- Map -- Spec -- Faction -- PreMatchMMR -- MMRChange -- PostMatchMMR -- Win
 local columns = {
   {
@@ -98,7 +80,7 @@ local columns = {
       a = 1.0,
     },
     comparesort = function(_self, _rowA, _rowB, _sortByColumn)
-      return NS.CustomSort(_self, _rowA, _rowB, _sortByColumn)
+      return NS.SortDateColumn(_self, _rowA, _rowB, _sortByColumn)
     end,
   },
   {
@@ -317,7 +299,7 @@ local function CreateFilterDropdown(label, width, parent, anchorTo, _, offsetX, 
   return dropdown
 end
 
-NS.RegionDropDown = CreateFilterDropdown("Region", 65, MMRTrackerGUI.frame, nil, nil, 21, 42)
+NS.RegionDropDown = CreateFilterDropdown("Region", 65, MMRTrackerGUI.frame, nil, nil, 25, 45)
 NS.CharDropDown = CreateFilterDropdown("Character", 175, MMRTrackerGUI.frame, NS.RegionDropDown.frame)
 NS.SpecDropDown = CreateFilterDropdown("Spec", 110, MMRTrackerGUI.frame, NS.CharDropDown.frame)
 NS.MapDropDown = CreateFilterDropdown("Map", 170, MMRTrackerGUI.frame, NS.SpecDropDown.frame)
@@ -364,31 +346,13 @@ NS.TimeDropDown:SetCallback("OnValueChanged", function(_, _, value)
     return
   end
   NS.filters.time = value
-  -- Close calendar UI if leaving Custom Range
-  if NS.CalendarMode > 0 and value ~= 10 then
-    NS.CalendarMode = 0
-    StaticPopup_Hide("MMRTRACKER_CUSTOMDATE")
-    if CalendarFrame and CalendarFrame:IsShown() then
-      CalendarFrame:Hide()
-    end
-  end
-  if value == 9 then -- Select Season
+  if value == 8 then -- Select Season
     NS.filters.selectedSeason = NS.season
     NS.SeasonDropDown.frame:Show()
     NS.RefreshFilters()
     return
   end
-  if value == 10 then -- Custom Range
-    NS.SeasonDropDown.frame:Hide()
-    NS.CalendarMode = 1
-    StaticPopup_Show("MMRTRACKER_CUSTOMDATE")
-    UIParentLoadAddOn("Blizzard_Calendar")
-    CalendarFrame:Show()
-    return
-  end
   NS.SeasonDropDown.frame:Hide()
-  NS.filters.customStart = 0
-  NS.filters.customEnd = 0
   NS.RefreshFilters()
 end)
 
@@ -399,14 +363,6 @@ NS.SeasonDropDown:SetCallback("OnValueChanged", function(_, _, value)
   NS.filters.selectedSeason = value
   NS.RefreshFilters()
 end)
-
--- StaticPopup for custom date picker
-StaticPopupDialogs["MMRTRACKER_CUSTOMDATE"] = {
-  text = "Select start and end date by clicking it.",
-  timeout = 0,
-  whileDead = true,
-  hideOnEscape = false,
-}
 
 -- Master refresh function (faceted)
 NS.RefreshFilters = function()
@@ -445,7 +401,7 @@ NS.RefreshFilters = function()
   NS.MapDropDown:SetValue(NS.filters.map)
 
   -- Rebuild season dropdown when in "Select Season" mode
-  if NS.filters.time == 9 then
+  if NS.filters.time == 8 then
     local seasonList, seasonOrder = NS.BuildSeasonList(NS.allRows)
     NS.SeasonDropDown:SetList(seasonList, seasonOrder)
     if not seasonList[NS.filters.selectedSeason] then
@@ -478,34 +434,25 @@ NS.UpdateStatusText = function()
   if mode == 1 then
     timeStr = "All Time"
   elseif mode == 2 then
-    timeStr = "Session"
-  elseif mode == 3 then
     timeStr = "Today"
-  elseif mode == 4 then
+  elseif mode == 3 then
     timeStr = "Yesterday"
-  elseif mode == 5 then
+  elseif mode == 4 then
     timeStr = "This Week"
-  elseif mode == 6 then
+  elseif mode == 5 then
     timeStr = "This Month"
-  elseif mode == 7 then
+  elseif mode == 6 then
     timeStr = "This Season"
-  elseif mode == 8 then
+  elseif mode == 7 then
     timeStr = "Prev. Season"
-  elseif mode == 9 then
+  elseif mode == 8 then
     if NS.filters.selectedSeason == "All" then
       timeStr = "All Seasons"
     else
       timeStr = NS.SEASON_NAMES[NS.filters.selectedSeason] or ("Season " .. NS.filters.selectedSeason)
     end
-  elseif mode == 10 then
-    local s, e = NS.filters.customStart, NS.filters.customEnd
-    if s > 0 and e > 0 then
-      timeStr = date("%m/%d/%y", s) .. "-" .. date("%m/%d/%y", e)
-    elseif s > 0 then
-      timeStr = date("%m/%d/%y", s) .. "+"
-    else
-      timeStr = "Custom Range"
-    end
+  elseif mode == 9 then
+    timeStr = "Current Session"
   else
     timeStr = "Unknown"
   end
@@ -560,250 +507,6 @@ if playerSpec then
   local _, playerClassFilename = UnitClass("player")
   NS.playerInfo.spec = playerSpecName
   NS.playerInfo.class = playerClassFilename
-end
-
-function NS.TrackMMR()
-  local TIME = NS.GetUTCTimestamp()
-
-  local hidden = false
-  local map = select(8, GetInstanceInfo())
-  local isArena = IsActiveBattlefieldArena()
-  local isBrawl = IsInBrawl()
-  local isSoloShuffle = IsSoloShuffle()
-  local isRated = true
-  local playerNum = GetNumBattlefieldScores()
-
-  if mapIDRemap[map] then
-    map = mapIDRemap[map]
-  end
-
-  local gameInfo = {
-    mapName = MMRTrackerFrame.instanceName,
-    race = "",
-    class = "",
-    classToken = "",
-    spec = "",
-    faction = -1,
-    serverTime = GetServerTime(),
-    gameTime = GetCurrentCalendarTime(),
-    localTime = GetServerTimeLocal(),
-    time = TIME,
-    date = NS.DateClean(TIME, NS.Timezone, NS.playerInfo.region),
-    duration = GetActiveMatchDuration(),
-    preMatchMMR = 0,
-    mmrChange = 0,
-    postMatchMMR = 0,
-    bracket = -1,
-    teamRating = 0,
-    previousRating = 0,
-    newRating = 0,
-    ratingChange = 0,
-    rating = 0,
-    winner = 0,
-    season = GetCurrentArenaSeason(),
-    stats = {},
-  }
-
-  SetBattlefieldScoreFaction(-1)
-
-  local bracket = GetActiveMatchBracket()
-  if bracket then
-    gameInfo.bracket = bracket
-  end
-
-  -- teamName, oldTeamRating, newTeamRating, teamRating (mmr)
-  local _, _, _, teamRating = GetBattlefieldTeamInfo(gameInfo.faction)
-
-  local info = GetScoreInfoByPlayerGuid(NS.playerInfo.guid)
-  if info then
-    local winner = GetBattlefieldWinner()
-
-    local preMatchMMR = info.prematchMMR
-    local mmrChange = info.postmatchMMR - info.prematchMMR
-    local postMatchMMR = info.postmatchMMR
-
-    gameInfo.race = info.raceName
-    gameInfo.class = info.className
-    gameInfo.classToken = info.classToken
-    gameInfo.spec = info.talentSpec
-    gameInfo.faction = info.faction
-    gameInfo.preMatchMMR = preMatchMMR
-    gameInfo.mmrChange = mmrChange
-    gameInfo.postMatchMMR = postMatchMMR
-    gameInfo.teamRating = teamRating
-    gameInfo.previousRating = info.rating
-    gameInfo.newRating = info.rating + info.ratingChange
-    gameInfo.ratingChange = info.ratingChange
-    gameInfo.rating = info.rating
-    gameInfo.winner = winner
-    gameInfo.stats = info.stats
-  end
-
-  if MMRTrackerFrame.ratedMap or gameInfo.postMatchMMR > 0 or gameInfo.teamRating > 0 then
-    local hasBracket = gameInfo.bracket ~= -1 and NS.TRACKED_BRACKETS[gameInfo.bracket]
-    local hasSpec = gameInfo.spec ~= ""
-
-    if hasBracket and hasSpec then
-      local bracketKey = tostring(gameInfo.bracket)
-
-      if not NS.db.data[NS.playerInfo.region] then
-        NS.db.data[NS.playerInfo.region] = {}
-      end
-      if not NS.db.data[NS.playerInfo.region][NS.playerInfo.name] then
-        NS.db.data[NS.playerInfo.region][NS.playerInfo.name] = {}
-      end
-      if not NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey] then
-        NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey] = {}
-      end
-      if gameInfo.bracket == 6 or gameInfo.bracket == 8 then
-        if not NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec] then
-          NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec] = {}
-        end
-      end
-
-      local gameTable = {
-        mapName = gameInfo.mapName,
-        race = gameInfo.race,
-        class = gameInfo.class,
-        classToken = gameInfo.classToken,
-        spec = gameInfo.spec,
-        faction = gameInfo.faction,
-        serverTime = gameInfo.serverTime,
-        gameTime = gameInfo.gameTime,
-        localTime = gameInfo.localTime,
-        time = gameInfo.time,
-        date = gameInfo.date,
-        duration = gameInfo.duration,
-        preMatchMMR = gameInfo.preMatchMMR,
-        mmrChange = gameInfo.mmrChange,
-        postMatchMMR = gameInfo.postMatchMMR,
-        bracket = bracketKey,
-        teamRating = gameInfo.teamRating,
-        previousRating = gameInfo.previousRating,
-        newRating = gameInfo.newRating,
-        ratingChange = gameInfo.ratingChange,
-        rating = gameInfo.rating,
-        winner = gameInfo.winner,
-        season = gameInfo.season,
-        stats = gameInfo.stats,
-      }
-
-      if gameInfo.bracket == 6 or gameInfo.bracket == 8 then
-        tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec], gameTable)
-      else
-        tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey], gameTable)
-      end
-
-      NS.db.data[NS.playerInfo.region][NS.playerInfo.name].lastGame = gameTable
-      MMRTrackerFrame.lastGame = gameTable
-
-      local soloLabel = PVP_RATING
-      local preMatchValue = gameInfo.rating
-      local postMathValue = gameInfo.rating + gameInfo.ratingChange
-      local valueChange = gameInfo.ratingChange
-      if gameInfo.bracket == 6 and NS.db.global.showShuffleRating == false then
-        soloLabel = "MMR:"
-        preMatchValue = gameInfo.preMatchMMR
-        postMathValue = gameInfo.postMatchMMR
-        valueChange = gameInfo.mmrChange
-      end
-      if gameInfo.bracket == 8 and NS.db.global.showBlitzRating == false then
-        soloLabel = "MMR:"
-        preMatchValue = gameInfo.preMatchMMR
-        postMathValue = gameInfo.postMatchMMR
-        valueChange = gameInfo.mmrChange
-      end
-      -- if preMatchValue < 0 then
-      --   preMatchValue = 0
-      -- end
-      -- if postMathValue < 0 then
-      --   postMathValue = 0
-      -- end
-
-      local showGainsLosses = NS.db.global.showGainsLosses
-      local showMMRDifference = NS.db.global.showMMRDifference
-      local includeChange = NS.db.global.includeChange
-      local dbColor = NS.db.global.color
-      -- convert user color rgb to hex
-      local userColorHex =
-        sformat("%02X%02X%02X%02X", dbColor.a * 255, dbColor.r * 255, dbColor.g * 255, dbColor.b * 255)
-
-      local bracketString = NS.TRACKED_BRACKETS[gameInfo.bracket] .. " " .. soloLabel .. " "
-      local valueString = showMMRDifference and (preMatchValue .. " › " .. postMathValue) or postMathValue
-      local positiveChange = valueChange > 0
-      local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
-      local valueColor = valueChange == 0 and "" or positiveChange and "|cFF00FF00" or "|cFFFF0000"
-      local userColor = "|c" .. userColorHex
-      local colorString = includeChange and userColor or valueColor
-      local changeString = showGainsLosses and (colorString .. " (" .. valueDifference .. ")" .. "|r") or ""
-      local string = bracketString .. valueString .. changeString
-      local str = sformat(string)
-      local index = 0
-      local key = "none"
-      if gameInfo.bracket == 0 then
-        index = 1
-        key = "2v2"
-      elseif gameInfo.bracket == 1 then
-        index = 2
-        key = "3v3"
-      elseif gameInfo.bracket == 3 then
-        index = 3
-        key = "rbg"
-      elseif gameInfo.bracket == 6 then
-        index = 4
-        key = "shuffle"
-      elseif gameInfo.bracket == 8 then
-        index = 5
-        key = "blitz"
-      end
-      NS.Interface:AddText(NS.Interface, str, index, key, true)
-
-      for i = 1, #NS.lines, 1 do
-        local matchingText = NS.lines[i]
-        if matchingText.bracket == "none" then
-          matchingText:SetAlpha(0)
-          break
-        end
-      end
-    end
-  end
-
-  for i = 1, playerNum do
-    local data = { GetBattlefieldScore(i) }
-    if data[1]:lower() == UnitName("PLAYER"):lower() then
-      playerNum = i
-    end
-  end
-
-  if
-    IsRatedBattleground()
-    or IsSoloRBG()
-    or (IsRatedArena() and not IsArenaSkirmish() and not isSoloShuffle)
-    or IsRatedSoloShuffle()
-  then
-    isRated = true
-  else
-    isRated = false
-  end
-
-  if not isArena then
-    if not isRated and playerNum then
-      playerNum = 1
-    end
-  end
-
-  -- Hide corrupted records
-  if not playerNum or map == 1170 or map == 2177 or (isArena and isBrawl and not isSoloShuffle) then
-    hidden = true
-  else
-    hidden = false
-  end
-
-  if hidden then
-    print("\124cFF74D06C[MMRTracker]\124r " .. "API returned corrupted data. Match will not be recorded.")
-  end
-
-  MMRTrackerFrame.instanceName = ""
 end
 
 local ShuffleFrame = CreateFrame("Frame")
@@ -863,7 +566,202 @@ function MMRTracker:ARENA_OPPONENT_UPDATE()
 end
 
 function MMRTracker:PVP_MATCH_COMPLETE()
-  After(1, NS.TrackMMR)
+  After(2, function()
+    local TIME = NS.GetUTCTime()
+
+    SetBattlefieldScoreFaction(nil)
+
+    local gameInfo = {
+      mapName = MMRTrackerFrame.instanceName,
+      race = "",
+      class = "",
+      classToken = "",
+      spec = "",
+      faction = -1,
+      serverTime = GetServerTime(),
+      gameTime = GetCurrentCalendarTime(),
+      localTime = GetServerTimeLocal(),
+      time = TIME,
+      date = NS.DateFormat(TIME, NS.Timezone, NS.playerInfo.region),
+      duration = GetActiveMatchDuration(),
+      preMatchMMR = 0,
+      mmrChange = 0,
+      postMatchMMR = 0,
+      bracket = -1,
+      teamRating = 0,
+      previousRating = 0,
+      newRating = 0,
+      ratingChange = 0,
+      rating = 0,
+      winner = 0,
+      season = GetCurrentArenaSeason(),
+      stats = {},
+    }
+
+    local bracket = GetActiveMatchBracket()
+    if bracket then
+      gameInfo.bracket = bracket
+    end
+
+    -- teamName, oldTeamRating, newTeamRating, teamRating (mmr)
+    local _, _, _, teamRating = GetBattlefieldTeamInfo(gameInfo.faction)
+
+    local info = GetScoreInfoByPlayerGuid(NS.playerInfo.guid)
+    if info then
+      local winner = GetBattlefieldWinner()
+
+      local preMatchMMR = info.prematchMMR
+      local mmrChange = info.postmatchMMR - info.prematchMMR
+      local postMatchMMR = info.postmatchMMR
+
+      gameInfo.race = info.raceName
+      gameInfo.class = info.className
+      gameInfo.classToken = info.classToken
+      gameInfo.spec = info.talentSpec
+      gameInfo.faction = info.faction
+      gameInfo.preMatchMMR = preMatchMMR
+      gameInfo.mmrChange = mmrChange
+      gameInfo.postMatchMMR = postMatchMMR
+      gameInfo.teamRating = teamRating
+      gameInfo.previousRating = info.rating
+      gameInfo.newRating = info.rating + info.ratingChange
+      gameInfo.ratingChange = info.ratingChange
+      gameInfo.rating = info.rating
+      gameInfo.winner = winner
+      gameInfo.stats = info.stats
+    end
+
+    if MMRTrackerFrame.ratedMap or gameInfo.postMatchMMR > 0 or gameInfo.teamRating > 0 then
+      local hasBracket = gameInfo.bracket ~= -1 and NS.TRACKED_BRACKETS[gameInfo.bracket]
+      local hasSpec = gameInfo.spec ~= ""
+
+      if hasBracket and hasSpec then
+        local bracketKey = tostring(gameInfo.bracket)
+
+        if not NS.db.data[NS.playerInfo.region] then
+          NS.db.data[NS.playerInfo.region] = {}
+        end
+        if not NS.db.data[NS.playerInfo.region][NS.playerInfo.name] then
+          NS.db.data[NS.playerInfo.region][NS.playerInfo.name] = {}
+        end
+        if not NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey] then
+          NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey] = {}
+        end
+        if gameInfo.bracket == 6 or gameInfo.bracket == 8 then
+          if not NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec] then
+            NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec] = {}
+          end
+        end
+
+        local gameTable = {
+          mapName = gameInfo.mapName,
+          race = gameInfo.race,
+          class = gameInfo.class,
+          classToken = gameInfo.classToken,
+          spec = gameInfo.spec,
+          faction = gameInfo.faction,
+          serverTime = gameInfo.serverTime,
+          gameTime = gameInfo.gameTime,
+          localTime = gameInfo.localTime,
+          time = gameInfo.time,
+          date = gameInfo.date,
+          duration = gameInfo.duration,
+          preMatchMMR = gameInfo.preMatchMMR,
+          mmrChange = gameInfo.mmrChange,
+          postMatchMMR = gameInfo.postMatchMMR,
+          bracket = bracketKey,
+          teamRating = gameInfo.teamRating,
+          previousRating = gameInfo.previousRating,
+          newRating = gameInfo.newRating,
+          ratingChange = gameInfo.ratingChange,
+          rating = gameInfo.rating,
+          winner = gameInfo.winner,
+          season = gameInfo.season,
+          stats = gameInfo.stats,
+        }
+
+        if gameInfo.bracket == 6 or gameInfo.bracket == 8 then
+          tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec], gameTable)
+        else
+          tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey], gameTable)
+        end
+
+        NS.db.data[NS.playerInfo.region][NS.playerInfo.name].lastGame = gameTable
+        MMRTrackerFrame.lastGame = gameTable
+
+        local soloLabel = PVP_RATING
+        local preMatchValue = gameInfo.rating
+        local postMathValue = gameInfo.rating + gameInfo.ratingChange
+        local valueChange = gameInfo.ratingChange
+        if gameInfo.bracket == 6 and NS.db.global.showShuffleRating == false then
+          soloLabel = "MMR:"
+          preMatchValue = gameInfo.preMatchMMR
+          postMathValue = gameInfo.postMatchMMR
+          valueChange = gameInfo.mmrChange
+        end
+        if gameInfo.bracket == 8 and NS.db.global.showBlitzRating == false then
+          soloLabel = "MMR:"
+          preMatchValue = gameInfo.preMatchMMR
+          postMathValue = gameInfo.postMatchMMR
+          valueChange = gameInfo.mmrChange
+        end
+        -- if preMatchValue < 0 then
+        --   preMatchValue = 0
+        -- end
+        -- if postMathValue < 0 then
+        --   postMathValue = 0
+        -- end
+
+        local showGainsLosses = NS.db.global.showGainsLosses
+        local showMMRDifference = NS.db.global.showMMRDifference
+        local includeChange = NS.db.global.includeChange
+        local dbColor = NS.db.global.color
+        -- convert user color rgb to hex
+        local userColorHex =
+          sformat("%02X%02X%02X%02X", dbColor.a * 255, dbColor.r * 255, dbColor.g * 255, dbColor.b * 255)
+
+        local bracketString = NS.TRACKED_BRACKETS[gameInfo.bracket] .. " " .. soloLabel .. " "
+        local valueString = showMMRDifference and (preMatchValue .. " › " .. postMathValue) or postMathValue
+        local positiveChange = valueChange > 0
+        local valueDifference = positiveChange and ("+" .. valueChange) or valueChange
+        local valueColor = valueChange == 0 and "" or positiveChange and "|cFF00FF00" or "|cFFFF0000"
+        local userColor = "|c" .. userColorHex
+        local colorString = includeChange and userColor or valueColor
+        local changeString = showGainsLosses and (colorString .. " (" .. valueDifference .. ")" .. "|r") or ""
+        local string = bracketString .. valueString .. changeString
+        local str = sformat(string)
+        local index = 0
+        local key = "none"
+        if gameInfo.bracket == 0 then
+          index = 1
+          key = "2v2"
+        elseif gameInfo.bracket == 1 then
+          index = 2
+          key = "3v3"
+        elseif gameInfo.bracket == 3 then
+          index = 3
+          key = "rbg"
+        elseif gameInfo.bracket == 6 then
+          index = 4
+          key = "shuffle"
+        elseif gameInfo.bracket == 8 then
+          index = 5
+          key = "blitz"
+        end
+        NS.Interface:AddText(NS.Interface, str, index, key, true)
+
+        for i = 1, #NS.lines, 1 do
+          local matchingText = NS.lines[i]
+          if matchingText.bracket == "none" then
+            matchingText:SetAlpha(0)
+            break
+          end
+        end
+      end
+    end
+
+    MMRTrackerFrame.instanceName = ""
+  end)
 end
 
 function MMRTracker:PLAYER_SPECIALIZATION_CHANGED()
@@ -998,7 +896,7 @@ end
 function MMRTracker:PLAYER_LOGIN()
   MMRTrackerFrame:UnregisterEvent("PLAYER_LOGIN")
 
-  NS.SessionStart, NS.Timezone = NS.GetUTCTimestamp(true)
+  NS.CurrentSessionStartTime, NS.Timezone = NS.GetUTCTime(true)
 
   local _playerGUID = UnitGUID("player")
   local _region = NS.REGION_NAME[GetActualRegion(playerGUID)]
@@ -1029,28 +927,28 @@ function MMRTracker:PLAYER_LOGIN()
   local isActiveSeason = NS.season and NS.season > 0 and NS.SEASON_NAMES[NS.season]
 
   if isActiveSeason then
-    NS.filters.time = 7 -- "This Season"
+    NS.filters.time = 6 -- "This Season"
     NS.TimeDropDown:SetList(NS.TIME_FILTERS, NS.TIME_FILTER_ORDER)
-    NS.TimeDropDown:SetValue(7)
+    NS.TimeDropDown:SetValue(6)
   else
-    -- Hide "This Season" (7) and "Prev. Season" (8) during off-season
+    -- Hide "This Season" (6) and "Prev. Season" (7) during off-season
     local filteredList = {}
     local filteredOrder = {}
     for _, key in ipairs(NS.TIME_FILTER_ORDER) do
-      if key ~= 7 and key ~= 8 then
+      if key ~= 6 and key ~= 7 then
         filteredList[key] = NS.TIME_FILTERS[key]
         tinsert(filteredOrder, key)
       end
     end
     NS.TimeDropDown:SetList(filteredList, filteredOrder)
-    NS.filters.time = 9 -- "Select Season"
+    NS.filters.time = 8 -- "Select Season"
     -- API returned 0 → "Off-Season"; nil or unrecognized → "No Season"
     if NS.season == 0 then
       NS.filters.selectedSeason = 0
     else
       NS.filters.selectedSeason = NS.NO_SEASON -- -1
     end
-    NS.TimeDropDown:SetValue(9)
+    NS.TimeDropDown:SetValue(8)
     NS.SeasonDropDown.frame:Show()
   end
 
@@ -1171,9 +1069,6 @@ function MMRTracker:ADDON_LOADED(addon)
     NS.CleanupDB(MMRTrackerDB, NS.DefaultDatabase)
 
     NS.Options_Setup()
-  elseif addon == "Blizzard_Calendar" then
-    hooksecurefunc("CalendarDayButton_Click", NS.CalendarParser)
-    CalendarFrame:HookScript("OnHide", NS.CalendarCleanup)
     MMRTrackerFrame:UnregisterEvent("ADDON_LOADED")
   end
 end

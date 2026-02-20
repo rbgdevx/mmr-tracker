@@ -29,7 +29,7 @@ NS.REGION_NAME = {
   [90] = "PTR",
 }
 
-NS.SessionStart = nil
+NS.CurrentSessionStartTime = nil
 NS.Timezone = nil
 
 -- Tab layout: All tabs on left side, growing right
@@ -47,17 +47,16 @@ NS.TAB_LABELS = { "All", "2v2", "3v3", "RBG", "Shuffle", "Blitz" }
 -- Time filter modes
 NS.TIME_FILTERS = {
   [1] = "All",
-  [2] = "Session",
-  [3] = "Today",
-  [4] = "Yesterday",
-  [5] = "This Week",
-  [6] = "This Month",
-  [7] = "This Season",
-  [8] = "Prev. Season",
-  [9] = "Select Season",
-  [10] = "Custom Range",
+  [2] = "Today",
+  [3] = "Yesterday",
+  [4] = "This Week",
+  [5] = "This Month",
+  [6] = "This Season",
+  [7] = "Prev. Season",
+  [8] = "Select Season",
+  [9] = "Current Session",
 }
-NS.TIME_FILTER_ORDER = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+NS.TIME_FILTER_ORDER = { 1, 2, 3, 4, 5, 6, 7, 8, 9 }
 
 -- Runtime filter state (not persisted between sessions)
 NS.filters = {
@@ -66,14 +65,9 @@ NS.filters = {
   tab = nil, -- nil = all brackets, or bracket key number (0,1,3,6,8)
   spec = "All",
   map = "All",
-  time = 7, -- default: "This Season"
+  time = 6, -- default: "This Season"
   selectedSeason = 0, -- for "Select Season" mode
-  customStart = 0,
-  customEnd = 0,
 }
-
--- Calendar state for custom date picker
-NS.CalendarMode = 0 -- 0=inactive, 1=selecting start, 2=selecting end
 
 -- Anti-recursion guard for dropdown SetValue callbacks
 NS.refreshing = false
