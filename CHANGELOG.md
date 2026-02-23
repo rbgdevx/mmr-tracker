@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.4.7](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.7) (2026-02-23)
+
+- Updating logic for how highest rating/mmr shows up so the default state is more "mmr centric" of an addon
+
 ## [v1.4.6](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.6) (2026-02-23)
 
 - Added all new table settings

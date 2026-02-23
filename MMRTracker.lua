@@ -279,21 +279,20 @@ NS.UpdateSummaryHeader = function()
       headerRightValue:SetText("N/A")
     end
   else
-    -- All tab
-    local bothRating = NS.db.global.showShuffleRating and NS.db.global.showBlitzRating
-    if bothRating then
-      headerRightLabel:SetText("Highest Rating")
-      headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
-      headerRightValue:SetTextColor(1, 1, 1, 1)
-      if stats.highestRating then
-        headerRightValue:SetText(stats.highestRating)
-      else
-        headerRightValue:SetText("N/A")
-      end
-    else
+    -- All tab: determine which value types are visible
+    local hasRatingBracket = NS.IsBracketVisible(0)
+      or NS.IsBracketVisible(1)
+      or NS.IsBracketVisible(3)
+      or (NS.IsBracketVisible(6) and NS.db.global.showShuffleRating)
+      or (NS.IsBracketVisible(8) and NS.db.global.showBlitzRating)
+    local hasMMRBracket = (NS.IsBracketVisible(6) and not NS.db.global.showShuffleRating)
+      or (NS.IsBracketVisible(8) and not NS.db.global.showBlitzRating)
+
+    headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+    headerRightValue:SetTextColor(1, 1, 1, 1)
+
+    if hasRatingBracket and hasMMRBracket then
       headerRightLabel:SetText("Highest Rating/MMR")
-      headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
-      headerRightValue:SetTextColor(1, 1, 1, 1)
       if not stats.highestRating and not stats.highestMMR then
         headerRightValue:SetText("N/A")
       else
@@ -301,6 +300,12 @@ NS.UpdateSummaryHeader = function()
         local mmrStr = stats.highestMMR and tostring(stats.highestMMR) or "N/A"
         headerRightValue:SetText(ratingStr .. " |cFFBBBBBB/|r " .. mmrStr)
       end
+    elseif hasMMRBracket then
+      headerRightLabel:SetText("Highest MMR")
+      headerRightValue:SetText(stats.highestMMR and tostring(stats.highestMMR) or "N/A")
+    else
+      headerRightLabel:SetText("Highest Rating")
+      headerRightValue:SetText(stats.highestRating and tostring(stats.highestRating) or "N/A")
     end
   end
 end
