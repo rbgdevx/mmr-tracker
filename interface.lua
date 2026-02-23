@@ -2,7 +2,6 @@ local AddonName, NS = ...
 
 local CreateFrame = CreateFrame
 local LibStub = LibStub
-local pairs = pairs
 local IsInInstance = IsInInstance
 local issecretvalue = issecretvalue or function(_)
   return false
@@ -30,6 +29,12 @@ NS.Interface.frame = InterfaceFrame
 local lines = {}
 NS.lines = lines
 
+-- Ordered keys so lines always read 2v2, 3v3, RBG, Shuffle, Blitz top-to-bottom
+-- DOWN: iterate 0→5, anchor first line at TOP, stack downward
+-- UP: iterate 5→0, anchor last bracket (Blitz) at BOTTOM, stack upward
+local LINE_ORDER_DOWN = { 0, 1, 2, 3, 4, 5 }
+local LINE_ORDER_UP = { 5, 4, 3, 2, 1, 0 }
+
 function Interface:MakeUnmovable(frame)
   frame:SetMovable(false)
   frame:RegisterForDrag()
@@ -48,11 +53,27 @@ function Interface:MakeMoveable(frame)
   frame:SetScript("OnDragStop", function(f)
     if NS.db.global.lock == false and CanInteractWithFrame(frame) then
       f:StopMovingOrSizing()
-      local a, _, b, c, d = f:GetPoint()
-      NS.db.global.position[1] = a
-      NS.db.global.position[2] = b
-      NS.db.global.position[3] = c
-      NS.db.global.position[4] = d
+      -- WoW resets the anchor after StopMovingOrSizing (typically to TOPLEFT).
+      -- Re-establish the grow-direction anchor using GetRect so the saved
+      -- position always matches, preventing jumps on subsequent OnDbChanged calls.
+      local left, bottom, width, height = f:GetRect()
+      if left and height and height > 0 then
+        local growUp = NS.db and NS.db.global.growDirection == "UP"
+        f:ClearAllPoints()
+        if growUp then
+          f:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left, bottom)
+          NS.db.global.position[1] = "BOTTOMLEFT"
+          NS.db.global.position[2] = "BOTTOMLEFT"
+          NS.db.global.position[3] = left
+          NS.db.global.position[4] = bottom
+        else
+          f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, bottom + height)
+          NS.db.global.position[1] = "TOPLEFT"
+          NS.db.global.position[2] = "BOTTOMLEFT"
+          NS.db.global.position[3] = left
+          NS.db.global.position[4] = bottom + height
+        end
+      end
     end
   end)
 end
@@ -108,9 +129,10 @@ function Interface:UpdateAnchors(frame, _lines)
   local anchor = frame.textFrame
   local firstVisible = nil
   local growUp = NS.db and NS.db.global.growDirection == "UP"
+  local order = growUp and LINE_ORDER_UP or LINE_ORDER_DOWN
 
-  for _, textFrame in pairs(_lines) do
-    local line = textFrame
+  for _, key in ipairs(order) do
+    local line = _lines[key]
     if line and line:GetAlpha() > 0 then
       line:ClearAllPoints()
 
@@ -137,6 +159,34 @@ function Interface:UpdateAnchors(frame, _lines)
       anchor = line
     end
   end
+end
+
+-- Flip the text frame anchor to act as a "hinge point".
+-- UP: anchor from BOTTOMLEFT — the saved position is the bottom edge, list grows up.
+-- DOWN: anchor from TOPLEFT — the saved position is the top edge, list grows down.
+-- The (x, y) offset stays the same so the hinge stays at the same screen position.
+function Interface:UpdateGrowDirection()
+  local f = Interface.textFrame
+  if not f then
+    return
+  end
+
+  local growUp = NS.db and NS.db.global.growDirection == "UP"
+  local newAnchor = growUp and "BOTTOMLEFT" or "TOPLEFT"
+
+  -- Already using the correct anchor — nothing to flip
+  if NS.db.global.position[1] == newAnchor then
+    return
+  end
+
+  -- Swap the anchor while keeping the same offset — the frame flips around the hinge
+  local relPoint = NS.db.global.position[2]
+  local x = NS.db.global.position[3]
+  local y = NS.db.global.position[4]
+
+  f:ClearAllPoints()
+  f:SetPoint(newAnchor, UIParent, relPoint, x, y)
+  NS.db.global.position[1] = newAnchor
 end
 
 function Interface:AddText(frame, text, key, bracket, hasData)

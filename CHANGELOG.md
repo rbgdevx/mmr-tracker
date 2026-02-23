@@ -1,5 +1,17 @@
 # MMR Tracker
 
+## [v1.4.6](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.6) (2026-02-23)
+
+- Added all new table settings
+- De-coupling bracket tabs from filters
+- Updating how growth direction works for text list
+- Fixing Highest Rating/MMR bug
+- Removing "Yesterday" from the time filter
+- Highest Rating/MMR now changes based on bracket
+- Added a new settings button in the table view
+- Allowing Shuffle/Blitz to show highest rating AND mmr
+- Update libs
+
 ## [v1.4.5](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.5) (2026-02-19)
 
 - Simplified date handling, time utility functions and sorting

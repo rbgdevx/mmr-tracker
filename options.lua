@@ -9,111 +9,120 @@ NS.AceConfig = {
   name = AddonName,
   type = "group",
   args = {
-    spacer1 = { name = " ", type = "description", order = 0 },
+    spacer1 = { name = " ", type = "description", order = 1 },
     description = {
       name = "Personal MMR only exists in Solo Shuffle/Blitz.\nFor 2v2, 3v3, and RBG you'll see Rating instead of MMR.",
       type = "description",
       fontSize = "medium",
-      order = 1,
-    },
-    spacer2 = { name = "", type = "description", order = 2 },
-    show2v2 = {
-      name = "Show 2v2 Rating",
-      type = "toggle",
+      order = 2,
       width = "full",
-      order = 3,
-      set = function(_, val)
-        NS.db.global.show2v2 = val
-        NS.OnDbChanged()
-      end,
-      get = function(_)
-        return NS.db.global.show2v2
-      end,
     },
-    show3v3 = {
-      name = "Show 3v3 Rating",
-      type = "toggle",
-      width = "full",
+    spacer2 = { name = " ", type = "description", order = 3 },
+    listGroup = {
+      name = "Text Settings",
+      type = "group",
+      inline = true,
       order = 4,
-      set = function(_, val)
-        NS.db.global.show3v3 = val
-        NS.OnDbChanged()
-      end,
-      get = function(_)
-        return NS.db.global.show3v3
-      end,
-    },
-    showRBG = {
-      name = "Show RBG Rating",
-      type = "toggle",
-      width = "full",
-      order = 5,
-      set = function(_, val)
-        NS.db.global.showRBG = val
-        NS.OnDbChanged()
-      end,
-      get = function(_)
-        return NS.db.global.showRBG
-      end,
-    },
-    showShuffle = {
-      name = "Show Shuffle MMR",
-      type = "toggle",
-      width = 1.0,
-      order = 6,
-      set = function(_, val)
-        NS.db.global.showShuffle = val
-        NS.OnDbChanged()
-      end,
-      get = function(_)
-        return NS.db.global.showShuffle
-      end,
-    },
-    showShuffleRating = {
-      name = "Show Rating instead of MMR",
-      type = "toggle",
-      width = 2.0,
-      order = 7,
-      set = function(_, val)
-        NS.db.global.showShuffleRating = val
-        NS.OnDbChanged()
-      end,
-      get = function(_)
-        return NS.db.global.showShuffleRating
-      end,
-    },
-    spacer3 = { name = "", type = "description", order = 8 },
-    showBlitz = {
-      name = "Show Blitz MMR",
-      type = "toggle",
-      width = 1.0,
-      order = 9,
-      set = function(_, val)
-        NS.db.global.showBlitz = val
-        NS.OnDbChanged()
-      end,
-      get = function(_)
-        return NS.db.global.showBlitz
-      end,
-    },
-    showBlitzRating = {
-      name = "Show Rating instead of MMR",
-      type = "toggle",
-      width = 2.0,
-      order = 10,
-      set = function(_, val)
-        NS.db.global.showBlitzRating = val
-        NS.OnDbChanged()
-      end,
-      get = function(_)
-        return NS.db.global.showBlitzRating
-      end,
+      args = {
+        show2v2 = {
+          name = "Show 2v2 Rating",
+          type = "toggle",
+          width = "full",
+          order = 1,
+          set = function(_, val)
+            NS.db.global.show2v2 = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.show2v2
+          end,
+        },
+        show3v3 = {
+          name = "Show 3v3 Rating",
+          type = "toggle",
+          width = "full",
+          order = 2,
+          set = function(_, val)
+            NS.db.global.show3v3 = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.show3v3
+          end,
+        },
+        showRBG = {
+          name = "Show RBG Rating",
+          type = "toggle",
+          width = "full",
+          order = 3,
+          set = function(_, val)
+            NS.db.global.showRBG = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showRBG
+          end,
+        },
+        showShuffle = {
+          name = "Show Shuffle MMR",
+          type = "toggle",
+          width = 1.0,
+          order = 4,
+          set = function(_, val)
+            NS.db.global.showShuffle = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showShuffle
+          end,
+        },
+        showShuffleRating = {
+          name = "Show Rating instead of MMR",
+          type = "toggle",
+          width = 2.0,
+          order = 5,
+          set = function(_, val)
+            NS.db.global.showShuffleRating = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showShuffleRating
+          end,
+        },
+        spacer1 = { name = "", type = "description", order = 6 },
+        showBlitz = {
+          name = "Show Blitz MMR",
+          type = "toggle",
+          width = 1.0,
+          order = 7,
+          set = function(_, val)
+            NS.db.global.showBlitz = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showBlitz
+          end,
+        },
+        showBlitzRating = {
+          name = "Show Rating instead of MMR",
+          type = "toggle",
+          width = 2.0,
+          order = 8,
+          set = function(_, val)
+            NS.db.global.showBlitzRating = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showBlitzRating
+          end,
+        },
+      },
     },
     tableGroup = {
       name = "Table Settings",
       type = "group",
       inline = true,
-      order = 11,
+      order = 5,
       args = {
         showSpecIcon = {
           name = "Show Spec Icon instead of Spec Name",
@@ -128,13 +137,92 @@ NS.AceConfig = {
             return NS.db.global.showSpecIcon
           end,
         },
+        -- spacer1 = { name = " ", type = "description", order = 2 },
+        -- description = {
+        -- 	name = "Control which brackets\nto show in the table view:",
+        -- 	type = "description",
+        -- 	fontSize = "medium",
+        -- 	order = 3,
+        -- 	width = "full",
+        -- },
+        description = {
+          name = "Choose which brackets to show in the table view",
+          type = "header",
+          order = 2,
+          width = "full",
+        },
+        show2v2 = {
+          name = "2v2",
+          type = "toggle",
+          width = "full",
+          order = 3,
+          set = function(_, val)
+            NS.db.table.show2v2 = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.table.show2v2
+          end,
+        },
+        show3v3 = {
+          name = "3v3",
+          type = "toggle",
+          width = "full",
+          order = 4,
+          set = function(_, val)
+            NS.db.table.show3v3 = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.table.show3v3
+          end,
+        },
+        showRBG = {
+          name = "RBG",
+          type = "toggle",
+          width = "full",
+          order = 5,
+          set = function(_, val)
+            NS.db.table.showRBG = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.table.showRBG
+          end,
+        },
+        showShuffle = {
+          name = "Shuffle",
+          type = "toggle",
+          width = "full",
+          order = 6,
+          set = function(_, val)
+            NS.db.table.showShuffle = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.table.showShuffle
+          end,
+        },
+        showBlitz = {
+          name = "Blitz",
+          type = "toggle",
+          width = "full",
+          order = 7,
+          set = function(_, val)
+            NS.db.table.showBlitz = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.table.showBlitz
+          end,
+        },
       },
     },
     generalGroup = {
       name = "General Settings",
       type = "group",
       inline = true,
-      order = 12,
+      order = 6,
       args = {
         lock = {
           name = "Lock the text into place",
@@ -254,7 +342,7 @@ NS.AceConfig = {
           type = "range",
           width = "double",
           order = 9,
-          min = 2,
+          min = 8,
           max = 64,
           step = 1,
           set = function(_, val)

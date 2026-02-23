@@ -48,7 +48,6 @@ NS.TAB_LABELS = { "All", "2v2", "3v3", "RBG", "Shuffle", "Blitz" }
 NS.TIME_FILTERS = {
   [1] = "All",
   [2] = "Today",
-  [3] = "Yesterday",
   [4] = "This Week",
   [5] = "This Month",
   [6] = "This Season",
@@ -56,7 +55,7 @@ NS.TIME_FILTERS = {
   [8] = "Select Season",
   [9] = "Current Session",
 }
-NS.TIME_FILTER_ORDER = { 1, 2, 3, 4, 5, 6, 7, 8, 9 }
+NS.TIME_FILTER_ORDER = { 1, 2, 4, 5, 6, 7, 8, 9 }
 
 -- Runtime filter state (not persisted between sessions)
 NS.filters = {
@@ -154,12 +153,19 @@ end
 
 NS.DefaultDatabase = {
   migrated = false,
+  table = {
+    show2v2 = false,
+    show3v3 = false,
+    showRBG = false,
+    showShuffle = true,
+    showBlitz = true,
+  },
   global = {
     lock = false,
     show2v2 = false,
     show3v3 = false,
     showRBG = false,
-    showShuffle = false,
+    showShuffle = true,
     showShuffleRating = false,
     showBlitz = true,
     showBlitzRating = false,
@@ -169,12 +175,12 @@ NS.DefaultDatabase = {
     showInPVE = false,
     showInPVP = false,
     showSpecIcon = false,
-    hideNoResults = true,
+    hideNoResults = false,
     hideIntro = false,
     fontSize = 24,
     fontFamily = "Friz Quadrata TT",
-    includeChange = false,
-    growDirection = "DOWN",
+    includeChange = true,
+    growDirection = "UP",
     textAlignment = "LEFT",
     color = {
       r = 255 / 255,

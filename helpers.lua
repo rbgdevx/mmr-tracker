@@ -20,6 +20,27 @@ local GetSecondsUntilWeeklyReset = C_DateAndTime.GetSecondsUntilWeeklyReset
 local SharedMedia = LibStub("LibSharedMedia-3.0")
 local ScrollingTable = LibStub("ScrollingTable")
 
+-- Check if a bracket is visible based on table settings
+NS.IsBracketVisible = function(bracketNum)
+  local t = NS.db.table
+  if bracketNum == 0 then
+    return t.show2v2
+  end
+  if bracketNum == 1 then
+    return t.show3v3
+  end
+  if bracketNum == 3 then
+    return t.showRBG
+  end
+  if bracketNum == 6 then
+    return t.showShuffle
+  end
+  if bracketNum == 8 then
+    return t.showBlitz
+  end
+  return true
+end
+
 NS.UpdateSize = function(frame, text)
   frame:SetWidth(text:GetStringWidth())
   frame:SetHeight(text:GetStringHeight())
@@ -538,6 +559,8 @@ NS.UpdateTable = function()
       gameInfo.rating + gameInfo.ratingChange, -- [16] post-match rating (newRating)
       gameInfo.postMatchMMR, -- [17] post-match MMR
       isWin, -- [18] win boolean (nil = excluded from W-L)
+      gameInfo.rating, -- [19] pre-match rating
+      gameInfo.preMatchMMR, -- [20] pre-match MMR
     })
   end
 
@@ -565,6 +588,8 @@ NS.ComputeSummaryStats = function(allRows)
     local newRating = row[16]
     local postMatchMMR = row[17]
     local isWin = row[18]
+    local preRating = row[19]
+    local preMatchMMR = row[20]
 
     -- Left side: Highest Rating / MMR (bracket tab + character + region + spec for Shuffle/Blitz)
     local passesLeftFilter = true
@@ -579,6 +604,8 @@ NS.ComputeSummaryStats = function(allRows)
     -- Check bracket tab
     if passesLeftFilter and NS.filters.tab ~= nil and bracketNum ~= NS.filters.tab then
       passesLeftFilter = false
+    elseif passesLeftFilter and NS.filters.tab == nil and not NS.IsBracketVisible(bracketNum) then
+      passesLeftFilter = false
     end
     -- Check spec (only for Shuffle/Blitz rows)
     if passesLeftFilter and (bracketNum == 6 or bracketNum == 8) then
@@ -586,24 +613,51 @@ NS.ComputeSummaryStats = function(allRows)
         passesLeftFilter = false
       end
     end
-
+    -- Check season (only for season-specific time filters)
     if passesLeftFilter then
-      -- Highest Rating (all brackets)
-      if newRating and newRating >= 0 then
-        if not highestRating or newRating > highestRating then
-          highestRating = newRating
+      local timeMode = NS.filters.time
+      if timeMode == 6 then -- This Season
+        local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
+        if row[13] ~= currentSeason then
+          passesLeftFilter = false
         end
-        -- Highest Rating from non-MMR brackets only (2v2/3v3/RBG)
-        if bracketNum == 0 or bracketNum == 1 or bracketNum == 3 then
-          if not highestRatingNonMMR or newRating > highestRatingNonMMR then
-            highestRatingNonMMR = newRating
+      elseif timeMode == 7 then -- Prev. Season
+        local currentSeason = NS.season > 0 and NS.season or NS.CURRENT_SEASON
+        if row[13] ~= (currentSeason - 1) then
+          passesLeftFilter = false
+        end
+      elseif timeMode == 8 then -- Select Season
+        local sel = NS.filters.selectedSeason
+        if sel ~= "All" and sel ~= nil then
+          if row[13] ~= sel then
+            passesLeftFilter = false
           end
         end
       end
-      -- Highest MMR (Shuffle/Blitz only)
-      if (bracketNum == 6 or bracketNum == 8) and postMatchMMR and postMatchMMR >= 0 then
-        if not highestMMR or postMatchMMR > highestMMR then
-          highestMMR = postMatchMMR
+    end
+
+    if passesLeftFilter then
+      -- Highest Rating (all brackets) — check both pre and post match values
+      for _, rating in ipairs({ preRating, newRating }) do
+        if rating and rating >= 0 then
+          if not highestRating or rating > highestRating then
+            highestRating = rating
+          end
+          if bracketNum == 0 or bracketNum == 1 or bracketNum == 3 then
+            if not highestRatingNonMMR or rating > highestRatingNonMMR then
+              highestRatingNonMMR = rating
+            end
+          end
+        end
+      end
+      -- Highest MMR (Shuffle/Blitz only) — check both pre and post match values
+      if bracketNum == 6 or bracketNum == 8 then
+        for _, mmr in ipairs({ preMatchMMR, postMatchMMR }) do
+          if mmr and mmr >= 0 then
+            if not highestMMR or mmr > highestMMR then
+              highestMMR = mmr
+            end
+          end
         end
       end
     end
@@ -665,6 +719,8 @@ NS.TableFilter = function(_, rowdata)
     if rowdata[11] ~= NS.filters.tab then
       return false
     end
+  elseif not NS.IsBracketVisible(rowdata[11]) then
+    return false
   end
   if NS.filters.spec ~= "All" then
     if rowdata[12] ~= NS.filters.spec then
@@ -705,10 +761,6 @@ NS.PassesTimeFilter = function(rawTime, season)
   if mode == 2 then
     return rawTime >= NS.GetUTCDayStart()
   end -- Today
-  if mode == 3 then -- Yesterday
-    local todayStart = NS.GetUTCDayStart()
-    return rawTime >= (todayStart - 86400) and rawTime < todayStart
-  end
   if mode == 4 then -- This Week
     return rawTime >= NS.GetLastWeeklyResetTime()
   end

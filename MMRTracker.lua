@@ -57,6 +57,33 @@ MMRTrackerGUI:Hide()
 -- MMRTrackerGUI.statustext:GetParent():Hide()
 MMRTrackerGUI:SetStatusText("Viewing all data for all brackets, for your current character, for the current season.")
 
+-- Add Settings button next to Close
+do
+  local statusbg = MMRTrackerGUI.statustext:GetParent()
+  local settingsBtn = CreateFrame("Button", nil, MMRTrackerGUI.frame, "UIPanelButtonTemplate")
+  settingsBtn:SetText("Settings")
+  settingsBtn:SetHeight(20)
+  settingsBtn:SetWidth(100)
+  -- Find the Close button (first UIPanelButtonTemplate child)
+  for _, child in ipairs({ MMRTrackerGUI.frame:GetChildren() }) do
+    if child.GetText and child:GetText() == CLOSE then
+      settingsBtn:SetPoint("RIGHT", child, "LEFT", -2, 0)
+      -- Align status bar with filters/table and make room for buttons
+      statusbg:SetPoint("BOTTOMLEFT", MMRTrackerGUI.frame, "BOTTOMLEFT", 21, 15)
+      statusbg:SetPoint("BOTTOMRIGHT", MMRTrackerGUI.frame, "BOTTOMRIGHT", -234, 15)
+      break
+    end
+  end
+  settingsBtn:SetScript("OnClick", function()
+    local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+    if not AceConfigDialog.OpenFrames[AddonName] then
+      AceConfigDialog:Open(AddonName)
+    else
+      AceConfigDialog:Close(AddonName)
+    end
+  end)
+end
+
 -- Make sure the window can be closed by pressing the escape button
 _G["MMRTRACKER_DATA_TABLE_WINDOW"] = MMRTrackerGUI.frame
 tinsert(UISpecialFrames, "MMRTRACKER_DATA_TABLE_WINDOW")
@@ -230,13 +257,15 @@ NS.UpdateSummaryHeader = function()
         headerRightValue:SetText("N/A")
       end
     else
-      headerRightLabel:SetText("Highest MMR")
+      headerRightLabel:SetText("Highest Rating/MMR")
       headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
       headerRightValue:SetTextColor(1, 1, 1, 1)
-      if stats.highestMMR then
-        headerRightValue:SetText(stats.highestMMR)
-      else
+      if not stats.highestRating and not stats.highestMMR then
         headerRightValue:SetText("N/A")
+      else
+        local ratingStr = stats.highestRating and tostring(stats.highestRating) or "N/A"
+        local mmrStr = stats.highestMMR and tostring(stats.highestMMR) or "N/A"
+        headerRightValue:SetText(ratingStr .. " |cFFBBBBBB/|r " .. mmrStr)
       end
     end
   elseif tab == 0 or tab == 1 or tab == 3 then
@@ -250,13 +279,29 @@ NS.UpdateSummaryHeader = function()
       headerRightValue:SetText("N/A")
     end
   else
-    -- All tab: show Rating/MMR
-    headerRightLabel:SetText("Highest Rating/MMR")
-    local ratingStr = stats.highestRating and tostring(stats.highestRating) or "N/A"
-    local mmrStr = stats.highestMMR and tostring(stats.highestMMR) or "N/A"
-    headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
-    headerRightValue:SetTextColor(1, 1, 1, 1)
-    headerRightValue:SetText(ratingStr .. " |cFFBBBBBB/|r " .. mmrStr)
+    -- All tab
+    local bothRating = NS.db.global.showShuffleRating and NS.db.global.showBlitzRating
+    if bothRating then
+      headerRightLabel:SetText("Highest Rating")
+      headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+      headerRightValue:SetTextColor(1, 1, 1, 1)
+      if stats.highestRating then
+        headerRightValue:SetText(stats.highestRating)
+      else
+        headerRightValue:SetText("N/A")
+      end
+    else
+      headerRightLabel:SetText("Highest Rating/MMR")
+      headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
+      headerRightValue:SetTextColor(1, 1, 1, 1)
+      if not stats.highestRating and not stats.highestMMR then
+        headerRightValue:SetText("N/A")
+      else
+        local ratingStr = stats.highestRating and tostring(stats.highestRating) or "N/A"
+        local mmrStr = stats.highestMMR and tostring(stats.highestMMR) or "N/A"
+        headerRightValue:SetText(ratingStr .. " |cFFBBBBBB/|r " .. mmrStr)
+      end
+    end
   end
 end
 
@@ -276,12 +321,56 @@ for i = 1, 6 do
     local id = self:GetID()
     NS.filters.tab = NS.TAB_BRACKETS[id]
     PanelTemplates_SetTab(tabFrame, id)
-    NS.RefreshFilters()
+    NS.RefreshFilters(true)
   end)
 end
 
 PanelTemplates_SetNumTabs(tabFrame, 6)
 PanelTemplates_SetTab(tabFrame, 1)
+
+NS.RefreshTabs = function()
+  local prevTab = nil
+  local selectedBracket = NS.filters.tab
+  local selectedVisible = false
+  local anyBracketVisible = false
+  for i = 2, 6 do
+    if NS.IsBracketVisible(NS.TAB_BRACKETS[i]) then
+      anyBracketVisible = true
+      break
+    end
+  end
+  NS.noBracketsVisible = not anyBracketVisible
+  for i = 1, 6 do
+    local tab = _G["MMRTrackerTabsTab" .. i]
+    local bracketKey = NS.TAB_BRACKETS[i] -- nil for "All" tab
+    local visible
+    if bracketKey == nil then
+      visible = anyBracketVisible -- hide "All" tab when no brackets are selected
+    else
+      visible = NS.IsBracketVisible(bracketKey)
+    end
+    if visible then
+      tab:ClearAllPoints()
+      if not prevTab then
+        tab:SetPoint("CENTER", MMRTrackerGUI.frame, "BOTTOMLEFT", 55, -10)
+      else
+        tab:SetPoint("LEFT", prevTab, "RIGHT", 2, 0)
+      end
+      tab:Show()
+      prevTab = tab
+      if bracketKey == selectedBracket then
+        selectedVisible = true
+      end
+    else
+      tab:Hide()
+    end
+  end
+  -- If the currently selected bracket tab was hidden, reset to "All"
+  if not selectedVisible and NS.filters.tab ~= nil then
+    NS.filters.tab = nil
+    PanelTemplates_SetTab(tabFrame, 1)
+  end
+end
 
 -- Dropdown filters: Region, Character, Spec, Map, Time
 local function CreateFilterDropdown(label, width, parent, anchorTo, _, offsetX, offsetY)
@@ -365,7 +454,8 @@ NS.SeasonDropDown:SetCallback("OnValueChanged", function(_, _, value)
 end)
 
 -- Master refresh function (faceted)
-NS.RefreshFilters = function()
+-- preserveFilters: when true, don't reset filter values that are missing from rebuilt lists
+NS.RefreshFilters = function(preserveFilters)
   NS.refreshing = true
 
   NS.allRows = NS.UpdateTable()
@@ -373,29 +463,45 @@ NS.RefreshFilters = function()
 
   -- Rebuild all dropdown lists using faceted logic
   local regionList, regionOrder = NS.BuildRegionList(NS.allRows)
+  if preserveFilters and NS.filters.region ~= "All" and not regionList[NS.filters.region] then
+    regionList[NS.filters.region] = NS.filters.region
+    tinsert(regionOrder, NS.filters.region)
+  end
   NS.RegionDropDown:SetList(regionList, regionOrder)
-  if not regionList[NS.filters.region] then
+  if not preserveFilters and not regionList[NS.filters.region] then
     NS.filters.region = "All"
   end
   NS.RegionDropDown:SetValue(NS.filters.region)
 
   local charList, charOrder = NS.BuildCharacterList(NS.allRows)
+  if preserveFilters and NS.filters.character ~= "All" and not charList[NS.filters.character] then
+    charList[NS.filters.character] = NS.filters.character
+    tinsert(charOrder, NS.filters.character)
+  end
   NS.CharDropDown:SetList(charList, charOrder)
-  if not charList[NS.filters.character] then
+  if not preserveFilters and not charList[NS.filters.character] then
     NS.filters.character = "All"
   end
   NS.CharDropDown:SetValue(NS.filters.character)
 
   local specList, specOrder = NS.BuildSpecList(NS.allRows)
+  if preserveFilters and NS.filters.spec ~= "All" and not specList[NS.filters.spec] then
+    specList[NS.filters.spec] = NS.filters.spec
+    tinsert(specOrder, NS.filters.spec)
+  end
   NS.SpecDropDown:SetList(specList, specOrder)
-  if not specList[NS.filters.spec] then
+  if not preserveFilters and not specList[NS.filters.spec] then
     NS.filters.spec = "All"
   end
   NS.SpecDropDown:SetValue(NS.filters.spec)
 
   local mapList, mapOrder = NS.BuildMapList(NS.allRows)
+  if preserveFilters and NS.filters.map ~= "All" and not mapList[NS.filters.map] then
+    mapList[NS.filters.map] = NS.filters.map
+    tinsert(mapOrder, NS.filters.map)
+  end
   NS.MapDropDown:SetList(mapList, mapOrder)
-  if not mapList[NS.filters.map] then
+  if not preserveFilters and not mapList[NS.filters.map] then
     NS.filters.map = "All"
   end
   NS.MapDropDown:SetValue(NS.filters.map)
@@ -403,9 +509,13 @@ NS.RefreshFilters = function()
   -- Rebuild season dropdown when in "Select Season" mode
   if NS.filters.time == 8 then
     local seasonList, seasonOrder = NS.BuildSeasonList(NS.allRows)
+    if preserveFilters and NS.filters.selectedSeason ~= "All" and not seasonList[NS.filters.selectedSeason] then
+      local label = NS.SEASON_NAMES[NS.filters.selectedSeason] or ("Season " .. NS.filters.selectedSeason)
+      seasonList[NS.filters.selectedSeason] = label
+      tinsert(seasonOrder, NS.filters.selectedSeason)
+    end
     NS.SeasonDropDown:SetList(seasonList, seasonOrder)
-    if not seasonList[NS.filters.selectedSeason] then
-      -- Selected season no longer in filtered data, pick first available
+    if not preserveFilters and not seasonList[NS.filters.selectedSeason] then
       NS.filters.selectedSeason = seasonOrder[1] or 0
     end
     NS.SeasonDropDown:SetValue(NS.filters.selectedSeason)
@@ -424,6 +534,10 @@ NS.RefreshFilters = function()
 end
 
 NS.UpdateStatusText = function()
+  if NS.noBracketsVisible then
+    MMRTrackerGUI:SetStatusText("Enable a bracket in settings to use the table.")
+    return
+  end
   local bracket = NS.filters.tab and NS.TRACKED_BRACKETS[NS.filters.tab] or "All Brackets"
   local spec = NS.filters.spec ~= "All" and NS.filters.spec or "All Specs"
   local char = NS.filters.character ~= "All" and NS.filters.character or "All Characters"
@@ -435,8 +549,6 @@ NS.UpdateStatusText = function()
     timeStr = "All Time"
   elseif mode == 2 then
     timeStr = "Today"
-  elseif mode == 3 then
-    timeStr = "Yesterday"
   elseif mode == 4 then
     timeStr = "This Week"
   elseif mode == 5 then
@@ -880,7 +992,8 @@ function MMRTracker:PLAYER_ENTERING_WORLD()
   NS.DataTable.frame:ClearAllPoints()
   NS.DataTable.frame:SetPoint("TOP", SimpleGroup.frame, "TOP", 0, -65)
 
-  NS.RefreshFilters()
+  NS.RefreshTabs()
+  NS.RefreshFilters(true)
 
   if MMRTrackerFrame.instanceType == "none" then
     toggleVisibilityInQueue()
@@ -978,8 +1091,10 @@ function NS.OnDbChanged()
   local showInPVP = NS.db.global.showInPVP and inPVP
 
   NS.DisplayBracketData()
+  NS.Interface:UpdateGrowDirection()
 
-  NS.RefreshFilters()
+  NS.RefreshTabs()
+  NS.RefreshFilters(true)
 
   if NS.db.global.lock then
     NS.Interface:Lock(NS.Interface.textFrame)
