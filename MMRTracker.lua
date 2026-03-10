@@ -257,16 +257,11 @@ NS.UpdateSummaryHeader = function()
         headerRightValue:SetText("N/A")
       end
     else
-      headerRightLabel:SetText("Highest Rating/MMR")
+      -- Show MMR only when "Show Rating instead of MMR" is off
+      headerRightLabel:SetText("Highest MMR")
       headerRightValue:SetFont("Fonts\\FRIZQT__.TTF", 18, "")
       headerRightValue:SetTextColor(1, 1, 1, 1)
-      if not stats.highestRating and not stats.highestMMR then
-        headerRightValue:SetText("N/A")
-      else
-        local ratingStr = stats.highestRating and tostring(stats.highestRating) or "N/A"
-        local mmrStr = stats.highestMMR and tostring(stats.highestMMR) or "N/A"
-        headerRightValue:SetText(ratingStr .. " |cFFBBBBBB/|r " .. mmrStr)
-      end
+      headerRightValue:SetText(stats.highestMMR and tostring(stats.highestMMR) or "N/A")
     end
   elseif tab == 0 or tab == 1 or tab == 3 then
     -- 2v2, 3v3, RBG: show Highest Rating

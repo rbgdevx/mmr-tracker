@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.4.8](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.8) (2026-03-09)
+
+- Fixed Shuffle/Blitz tabs showing "Highest Rating/MMR" instead of "Highest MMR" when "Show Rating instead of MMR" is unchecked
+
 ## [v1.4.7](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.7) (2026-02-23)
 
 - Updating logic for how highest rating/mmr shows up so the default state is more "mmr centric" of an addon
