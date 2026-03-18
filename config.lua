@@ -29,7 +29,6 @@ NS.REGION_NAME = {
   [90] = "PTR",
 }
 
-NS.CurrentSessionStartTime = nil
 NS.Timezone = nil
 
 -- Tab layout: All tabs on left side, growing right
@@ -53,9 +52,8 @@ NS.TIME_FILTERS = {
   [6] = "This Season",
   [7] = "Prev. Season",
   [8] = "Select Season",
-  [9] = "Current Session",
 }
-NS.TIME_FILTER_ORDER = { 1, 2, 4, 5, 6, 7, 8, 9 }
+NS.TIME_FILTER_ORDER = { 1, 2, 4, 5, 6, 7, 8 }
 
 -- Runtime filter state (not persisted between sessions)
 NS.filters = {

@@ -1,5 +1,10 @@
 # MMR Tracker
 
+## [v1.4.9](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.9) (2026-03-17)
+
+- Removing current session filter
+- Removing faceted filters so you can better see what characters you have available regardless of your other filters
+
 ## [v1.4.8](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.8) (2026-03-09)
 
 - Fixed Shuffle/Blitz tabs showing "Highest Rating/MMR" instead of "Highest MMR" when "Show Rating instead of MMR" is unchecked

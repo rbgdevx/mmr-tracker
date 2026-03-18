@@ -781,61 +781,21 @@ NS.PassesTimeFilter = function(rawTime, season)
     end
     return season == NS.filters.selectedSeason
   end
-  if mode == 9 then -- Current Session
-    return NS.CurrentSessionStartTime and rawTime >= NS.CurrentSessionStartTime
-  end
   return true
 end
 
--- Faceted filter helpers
--- Check if a row passes all filters EXCEPT the excluded one
-NS.RowPassesFilters = function(rowdata, exclude)
-  if exclude ~= "region" and NS.filters.region ~= "All" then
-    if rowdata[14] ~= NS.filters.region then
-      return false
-    end
-  end
-  if exclude ~= "character" and NS.filters.character ~= "All" then
-    if rowdata[15] ~= NS.filters.character then
-      return false
-    end
-  end
-  if exclude ~= "tab" and NS.filters.tab ~= nil then
-    if rowdata[11] ~= NS.filters.tab then
-      return false
-    end
-  end
-  if exclude ~= "spec" and NS.filters.spec ~= "All" then
-    if rowdata[12] ~= NS.filters.spec then
-      return false
-    end
-  end
-  if exclude ~= "map" and NS.filters.map ~= "All" then
-    if rowdata[2] ~= NS.filters.map then
-      return false
-    end
-  end
-  if exclude ~= "time" then
-    if not NS.PassesTimeFilter(rowdata[10], rowdata[13]) then
-      return false
-    end
-  end
-  return true
-end
-
--- Build faceted dropdown list by scanning all rows with one filter excluded
-NS.BuildFacetedList = function(allRows, exclude, fieldIndex)
+-- Filter helpers
+-- Build a simple list of all unique values for a field across all rows (no faceted filtering)
+NS.BuildFullList = function(allRows, fieldIndex)
   local list = { ["All"] = "All" }
   local order = { "All" }
   local seen = {}
   for _, row in ipairs(allRows) do
-    if NS.RowPassesFilters(row, exclude) then
-      local value = row[fieldIndex]
-      if value and value ~= "" and not seen[value] then
-        seen[value] = true
-        list[value] = value
-        tinsert(order, value)
-      end
+    local value = row[fieldIndex]
+    if value and value ~= "" and not seen[value] then
+      seen[value] = true
+      list[value] = value
+      tinsert(order, value)
     end
   end
   table.sort(order, function(a, b)
@@ -851,35 +811,33 @@ NS.BuildFacetedList = function(allRows, exclude, fieldIndex)
 end
 
 NS.BuildRegionList = function(allRows)
-  return NS.BuildFacetedList(allRows, "region", 14)
+  return NS.BuildFullList(allRows, 14)
 end
 
 NS.BuildCharacterList = function(allRows)
-  return NS.BuildFacetedList(allRows, "character", 15)
+  return NS.BuildFullList(allRows, 15)
 end
 
 NS.BuildSpecList = function(allRows)
-  return NS.BuildFacetedList(allRows, "spec", 12)
+  return NS.BuildFullList(allRows, 12)
 end
 
 NS.BuildMapList = function(allRows)
-  return NS.BuildFacetedList(allRows, "map", 2)
+  return NS.BuildFullList(allRows, 2)
 end
 
--- Build season dropdown list from data (faceted), using SEASON_NAMES for display labels
+-- Build season dropdown list from data, using SEASON_NAMES for display labels
 NS.BuildSeasonList = function(allRows)
   local list = { ["All"] = "All" }
   local order = { "All" }
   local seen = {}
   for _, row in ipairs(allRows) do
-    if NS.RowPassesFilters(row, "time") then
-      local season = row[13]
-      if season and not seen[season] then
-        seen[season] = true
-        local label = NS.SEASON_NAMES[season] or ("Season " .. season)
-        list[season] = label
-        tinsert(order, season)
-      end
+    local season = row[13]
+    if season and not seen[season] then
+      seen[season] = true
+      local label = NS.SEASON_NAMES[season] or ("Season " .. season)
+      list[season] = label
+      tinsert(order, season)
     end
   end
   -- Sort seasons ascending; Off-Season (0) and No Season (-1) at the end

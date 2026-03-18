@@ -563,8 +563,6 @@ NS.UpdateStatusText = function()
     else
       timeStr = NS.SEASON_NAMES[NS.filters.selectedSeason] or ("Season " .. NS.filters.selectedSeason)
     end
-  elseif mode == 9 then
-    timeStr = "Current Session"
   else
     timeStr = "Unknown"
   end
@@ -1009,7 +1007,7 @@ end
 function MMRTracker:PLAYER_LOGIN()
   MMRTrackerFrame:UnregisterEvent("PLAYER_LOGIN")
 
-  NS.CurrentSessionStartTime, NS.Timezone = NS.GetUTCTime(true)
+  _, NS.Timezone = NS.GetUTCTime(true)
 
   local _playerGUID = UnitGUID("player")
   local _region = NS.REGION_NAME[GetActualRegion(playerGUID)]

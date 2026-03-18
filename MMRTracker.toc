@@ -1,6 +1,6 @@
-## Interface: 120001
+## Interface: 120005, 120001
 ## Title: MMR Tracker
-## Version: 1.4.8
+## Version: 1.4.9
 ## Author: RBGDEV
 ## Notes: Tracks personal MMR and Rating for all pvp brackets
 ## IconTexture: Interface/AddOns/MMRTracker/logo.tga
