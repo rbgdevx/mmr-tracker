@@ -676,7 +676,20 @@ function MMRTracker:ARENA_OPPONENT_UPDATE()
 end
 
 function MMRTracker:PVP_MATCH_COMPLETE()
-  After(2, function()
+  local MAX_ATTEMPTS = 10
+  local RETRY_INTERVAL = 0.1
+
+  local function TryCollectData(attempt)
+    local info = GetScoreInfoByPlayerGuid(NS.playerInfo.guid)
+    if not info then
+      if attempt < MAX_ATTEMPTS then
+        After(RETRY_INTERVAL, function()
+          TryCollectData(attempt + 1)
+        end)
+      end
+      return
+    end
+
     local TIME = NS.GetUTCTime()
 
     SetBattlefieldScoreFaction(nil)
@@ -716,7 +729,6 @@ function MMRTracker:PVP_MATCH_COMPLETE()
     -- teamName, oldTeamRating, newTeamRating, teamRating (mmr)
     local _, _, _, teamRating = GetBattlefieldTeamInfo(gameInfo.faction)
 
-    local info = GetScoreInfoByPlayerGuid(NS.playerInfo.guid)
     if info then
       local winner = GetBattlefieldWinner()
 
@@ -871,7 +883,9 @@ function MMRTracker:PVP_MATCH_COMPLETE()
     end
 
     MMRTrackerFrame.instanceName = ""
-  end)
+  end
+
+  TryCollectData(1)
 end
 
 function MMRTracker:PLAYER_SPECIALIZATION_CHANGED()

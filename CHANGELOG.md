@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.4.10](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.10) (2026-03-18)
+
+- Tracking end of game info instantly instead of after a delay, so match info won't be missed if you leave quickly
+
 ## [v1.4.9](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.9) (2026-03-17)
 
 - Removing current session filter
