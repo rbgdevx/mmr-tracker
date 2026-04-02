@@ -1,5 +1,9 @@
 # MMR Tracker
 
+## [v1.4.11](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.11) (2026-04-01)
+
+- Fixing dates in the table from showing 7hrs ahead
+
 ## [v1.4.10](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.10) (2026-03-18)
 
 - Tracking end of game info instantly instead of after a delay, so match info won't be missed if you leave quickly

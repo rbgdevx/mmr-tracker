@@ -41,7 +41,11 @@
     "FauxScrollFrame_OnVerticalScroll",
     "FauxScrollFrame_GetOffset",
     "CopyTable",
-    "CLASS_ICON_TCOORDS"
+    "CLASS_ICON_TCOORDS",
+    "PanelTemplates_SetNumTabs",
+    "PanelTemplates_SetTab",
+    "ChatEdit_InsertLink",
+    "ChatFrameUtil"
   ],
   "Lua.runtime.builtin": {
     "basic": "disable",
@@ -55,7 +59,7 @@
     "utf8": "disable"
   },
   "Lua.workspace.library": [
-    "c:\\Users\\17186\\.cursor\\extensions\\ketho.wow-api-0.20.7\\Annotations\\Core"
+    "c:\\Users\\17186\\.antigravity\\extensions\\ketho.wow-api-0.22.3\\Annotations\\Core"
   ],
   "Lua.diagnostics.disable": [
     "assign-type-mismatch"

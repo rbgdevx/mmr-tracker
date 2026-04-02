@@ -88,9 +88,9 @@ end
 
 NS.DateFormat = function(timeRaw, timeZone, region)
   if region == "US" then
-    return timeZone and date("%I:%M %p %m/%d/%y", timeRaw + (timeZone * 3600)) or date("%I:%M %p %m/%d/%y", timeRaw)
+    return date("%I:%M %p %m/%d/%y", timeRaw)
   else
-    return timeZone and date("%H:%M %d.%m.%y", timeRaw + (timeZone * 3600)) or date("%H:%M %d.%m.%y", timeRaw)
+    return date("%H:%M %d.%m.%y", timeRaw)
   end
 end
 
