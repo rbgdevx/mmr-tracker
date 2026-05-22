@@ -1,5 +1,13 @@
 # MMR Tracker
 
+## [v1.4.12](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.12) (2026-05-21)
+
+- Adding Win-Loss to pvp queue window buttons next to each brackets cr
+- Adding Win Rate to pvp queue window tooltips
+- Adding Win Rate to pvp inspect window bracket records
+- Recording full scoreboard data for future use
+- Adding the ability to multi-select games in the table to filter by
+
 ## [v1.4.11](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.11) (2026-04-01)
 
 - Fixing dates in the table from showing 7hrs ahead

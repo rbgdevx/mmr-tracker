@@ -6,7 +6,7 @@ local LibStub = LibStub
 local SharedMedia = LibStub("LibSharedMedia-3.0")
 
 NS.AceConfig = {
-  name = AddonName,
+  name = AddonName .. " v" .. C_AddOns.GetAddOnMetadata(AddonName, "Version"),
   type = "group",
   args = {
     spacer1 = { name = " ", type = "description", order = 1 },
@@ -238,12 +238,26 @@ NS.AceConfig = {
             return NS.db.global.lock
           end,
         },
+        showRecordInQueue = {
+          name = "Show win-loss in PvP queue window",
+          desc = "Shows your season record (W-L) next to rating in the PvP queue window.",
+          type = "toggle",
+          width = "double",
+          order = 2,
+          set = function(_, val)
+            NS.db.global.showRecordInQueue = val
+            NS.OnDbChanged()
+          end,
+          get = function(_)
+            return NS.db.global.showRecordInQueue
+          end,
+        },
         showMMRDifference = {
           name = "Show before and after values (88 › 100)",
           desc = 'Shows "2800 › 2900" text.',
           type = "toggle",
           width = "double",
-          order = 2,
+          order = 3,
           set = function(_, val)
             NS.db.global.showMMRDifference = val
             NS.OnDbChanged()

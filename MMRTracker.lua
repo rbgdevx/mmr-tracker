@@ -24,6 +24,8 @@ local sformat = string.format
 local After = C_Timer.After
 local GetActiveMatchBracket = C_PvP.GetActiveMatchBracket
 local GetScoreInfoByPlayerGuid = C_PvP.GetScoreInfoByPlayerGuid
+local GetScoreInfo = C_PvP.GetScoreInfo
+local GetNumBattlefieldScores = GetNumBattlefieldScores
 local IsRatedMap = C_PvP.IsRatedMap
 local GetGameAccountInfoByGUID = C_BattleNet.GetGameAccountInfoByGUID
 local GetCurrentCalendarTime = C_DateAndTime.GetCurrentCalendarTime
@@ -176,9 +178,61 @@ local columns = {
   },
 }
 
-local DataTable = ScrollingTable:CreateST(columns, 22, 20, nil, SimpleGroup.frame, nil)
+local DataTable =
+  ScrollingTable:CreateST(columns, 22, 20, { ["r"] = 0.3, ["g"] = 0.6, ["b"] = 1.0, ["a"] = 0.4 }, SimpleGroup.frame, true)
 DataTable:EnableSelection(true)
 NS.DataTable = DataTable
+
+-- Custom click handler for multi-selection with per-row toggle
+DataTable:RegisterEvents({
+  ["OnEnter"] = function()
+    return false -- delegate to default hover behavior
+  end,
+  ["OnLeave"] = function()
+    return false -- delegate to default leave behavior
+  end,
+  ["OnClick"] = function(rowFrame, cellFrame, data, cols, row, realrow, column, st, button, ...)
+    if button == "LeftButton" then
+      if not (row or realrow) then
+        return false -- delegate header sort to default handler
+      end
+
+      local filteredIndex = row + (st.offset or 0)
+
+      if IsShiftKeyDown() and st._mmrt_lastClickIndex then
+        -- Shift-click: range select from anchor to current row
+        local startIdx = math.min(st._mmrt_lastClickIndex, filteredIndex)
+        local endIdx = math.max(st._mmrt_lastClickIndex, filteredIndex)
+        for idx = startIdx, endIdx do
+          local rr = st.filtered[idx]
+          if rr then
+            st.selected:Set(rr)
+          end
+        end
+        -- Anchor stays put so repeated shift-clicks extend from the same origin
+      else
+        -- Regular click: toggle individual row and update anchor
+        if st.selected:IsSelected(realrow) then
+          st.selected._storage[realrow] = nil
+        else
+          st.selected:Set(realrow)
+        end
+        st._mmrt_lastClickIndex = filteredIndex
+      end
+
+      st:Refresh()
+      NS.UpdateSummaryHeader()
+      return true
+    elseif button == "RightButton" then
+      -- Right-click: clear all selections
+      st.selected:Clear()
+      st._mmrt_lastClickIndex = nil
+      st:Refresh()
+      NS.UpdateSummaryHeader()
+      return true
+    end
+  end,
+}, true)
 
 -- Summary header above the data table
 local headerFrame = CreateFrame("Frame", "MMRTrackerHeader", SimpleGroup.frame)
@@ -226,7 +280,17 @@ NS.UpdateSummaryHeader = function()
     return
   end
 
-  local stats = NS.ComputeSummaryStats(NS.allRows)
+  local stats
+  local selection = NS.DataTable.multiselection and NS.DataTable:GetSelection()
+  if selection and #selection >= 2 then
+    local selectedRows = {}
+    for _, idx in ipairs(selection) do
+      tinsert(selectedRows, NS.allRows[idx])
+    end
+    stats = NS.ComputeSelectionStats(selectedRows)
+  else
+    stats = NS.ComputeSummaryStats(NS.allRows)
+  end
 
   -- Left: Win Rate
   local total = stats.wins + stats.losses
@@ -459,6 +523,7 @@ NS.RefreshFilters = function(preserveFilters)
   NS.refreshing = true
 
   NS.allRows = NS.UpdateTable()
+  NS.DataTable.selected:Clear()
   NS.DataTable:SetData(NS.allRows, true)
 
   -- Rebuild all dropdown lists using faceted logic
@@ -588,6 +653,7 @@ MMRTrackerFrame.loaded = false
 MMRTrackerFrame.wasInInstance = false
 MMRTrackerFrame.ratedMap = false
 MMRTrackerFrame.inQueue = false
+MMRTrackerFrame.sessionGameCount = 0
 NS.MMRTracker.frame = MMRTrackerFrame
 
 local function GetActualRegion(guid)
@@ -802,6 +868,37 @@ function MMRTracker:PVP_MATCH_COMPLETE()
           stats = gameInfo.stats,
         }
 
+        -- Capture full match scoreboard for all players
+        local scoreboard = {}
+        local numScores = GetNumBattlefieldScores()
+        for i = 1, numScores do
+          local scoreInfo = GetScoreInfo(i)
+          if scoreInfo then
+            tinsert(scoreboard, {
+              name = scoreInfo.name,
+              guid = scoreInfo.guid,
+              killingBlows = scoreInfo.killingBlows,
+              honorableKills = scoreInfo.honorableKills,
+              deaths = scoreInfo.deaths,
+              honorGained = scoreInfo.honorGained,
+              faction = scoreInfo.faction,
+              raceName = scoreInfo.raceName,
+              className = scoreInfo.className,
+              classToken = scoreInfo.classToken,
+              talentSpec = scoreInfo.talentSpec,
+              damageDone = scoreInfo.damageDone,
+              healingDone = scoreInfo.healingDone,
+              rating = scoreInfo.rating,
+              ratingChange = scoreInfo.ratingChange,
+              prematchMMR = scoreInfo.prematchMMR,
+              postmatchMMR = scoreInfo.postmatchMMR,
+              prematchRating = scoreInfo.prematchRating,
+              stats = scoreInfo.stats,
+            })
+          end
+        end
+        gameTable.scoreboard = scoreboard
+
         if gameInfo.bracket == 6 or gameInfo.bracket == 8 then
           tinsert(NS.db.data[NS.playerInfo.region][NS.playerInfo.name][bracketKey][gameInfo.spec], gameTable)
         else
@@ -810,6 +907,11 @@ function MMRTracker:PVP_MATCH_COMPLETE()
 
         NS.db.data[NS.playerInfo.region][NS.playerInfo.name].lastGame = gameTable
         MMRTrackerFrame.lastGame = gameTable
+
+        MMRTrackerFrame.sessionGameCount = MMRTrackerFrame.sessionGameCount + 1
+        local count = MMRTrackerFrame.sessionGameCount
+        local plural = count == 1 and "game" or "games"
+        print("|cFF00CCFF[MMRTracker]|r Game recorded! Type |cFFFFFF00/reload|r to save " .. count .. " unsaved " .. plural .. ".")
 
         local soloLabel = PVP_RATING
         local preMatchValue = gameInfo.rating
@@ -1016,6 +1118,12 @@ function MMRTracker:PLAYER_ENTERING_WORLD()
       NS.Interface.textFrame:SetAlpha(0)
     end
   end
+
+  if MMRTrackerFrame.sessionGameCount > 0 then
+    local count = MMRTrackerFrame.sessionGameCount
+    local plural = count == 1 and "game" or "games"
+    print("|cFF00CCFF[MMRTracker]|r You have " .. count .. " unsaved " .. plural .. ". Type |cFFFFFF00/reload|r to prevent data loss on disconnect.")
+  end
 end
 
 function MMRTracker:PLAYER_LOGIN()
@@ -1200,3 +1308,226 @@ function MMRTracker:ADDON_LOADED(addon)
   end
 end
 MMRTrackerFrame:RegisterEvent("ADDON_LOADED")
+
+-- PvP Conquest Frame Hooks (rated panel enhancements)
+local function SetupConquestFrameHooks()
+  local GetPersonalRatedInfo = GetPersonalRatedInfo
+  local mfloor = math.floor
+
+  -- Hook ConquestFrame_Update: add "cr" suffix and win rate to bracket buttons
+  hooksecurefunc("ConquestFrame_Update", function(self)
+    if not CONQUEST_BUTTONS then
+      return
+    end
+
+    for i = 1, 5 do
+      local button = CONQUEST_BUTTONS[i]
+      if not button or not button.bracketIndex then
+        break
+      end
+
+      local _, _, _, seasonPlayed, seasonWon = GetPersonalRatedInfo(button.bracketIndex)
+
+      -- Win rate to the right of the rating number, smaller grey font
+      -- Commented out: may revisit with a different idea
+      -- if not button.MMRTWinRate then
+      --   button.MMRTWinRate = button:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+      --   button.MMRTWinRate:SetPoint("LEFT", button.CurrentRating, "RIGHT", 4, 0)
+      -- end
+      -- if seasonPlayed and seasonPlayed > 0 then
+      --   local pct = mfloor((seasonWon / seasonPlayed) * 100 + 0.5)
+      --   button.MMRTWinRate:SetText("(" .. pct .. "%)")
+      --   button.MMRTWinRate:Show()
+      -- else
+      --   button.MMRTWinRate:Hide()
+      -- end
+
+      -- Season record to the right of the rating number
+      if not button.MMRTRecord then
+        button.MMRTRecord = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall2")
+        button.MMRTRecord:SetPoint("LEFT", button.CurrentRating, "RIGHT", 4, 0.3)
+      end
+      if NS.db.global.showRecordInQueue then
+        local wins = seasonWon or 0
+        local losses = (seasonPlayed or 0) - wins
+        if wins == 0 and losses == 0 then
+          button.MMRTRecord:Hide()
+        else
+          button.MMRTRecord:SetText("(" .. wins .. "-" .. losses .. ")")
+          button.MMRTRecord:Show()
+        end
+      else
+        button.MMRTRecord:Hide()
+      end
+
+      -- Hook tooltip on first update to insert win rate into the anchor chain
+      if not button._mmrt_tooltip_hooked then
+        button:HookScript("OnEnter", function(btn)
+          local tooltip = ConquestTooltip
+          if not tooltip or not btn.bracketIndex then
+            return
+          end
+
+          local _, _, _, sp, sw, wp, ww = GetPersonalRatedInfo(btn.bracketIndex)
+
+          -- Create win rate FontStrings once (GameFontHighlight matches the stat lines)
+          if not tooltip.MMRTWeeklyWinRate then
+            tooltip.MMRTWeeklyWinRate = tooltip:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+            tooltip.MMRTWeeklyWinRate:SetJustifyH("LEFT")
+          end
+          if not tooltip.MMRTSeasonWinRate then
+            tooltip.MMRTSeasonWinRate = tooltip:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+            tooltip.MMRTSeasonWinRate:SetJustifyH("LEFT")
+          end
+
+          -- Weekly win rate (only when games have been played)
+          local showWeeklyWR = wp and wp > 0
+          if showWeeklyWR then
+            tooltip.MMRTWeeklyWinRate:SetText("Win Rate: " .. mfloor((ww / wp) * 100 + 0.5) .. "%")
+            tooltip.MMRTWeeklyWinRate:ClearAllPoints()
+            tooltip.MMRTWeeklyWinRate:SetPoint("TOPLEFT", tooltip.WeeklyPlayed, "BOTTOMLEFT", 0, -2)
+            tooltip.MMRTWeeklyWinRate:Show()
+          else
+            tooltip.MMRTWeeklyWinRate:Hide()
+          end
+
+          -- Re-anchor WeeklyMostPlayedSpec (follows win rate or Played)
+          if tooltip.WeeklyMostPlayedSpec then
+            tooltip.WeeklyMostPlayedSpec:ClearAllPoints()
+            local weeklyAnchor = showWeeklyWR and tooltip.MMRTWeeklyWinRate or tooltip.WeeklyPlayed
+            tooltip.WeeklyMostPlayedSpec:SetPoint("TOPLEFT", weeklyAnchor, "BOTTOMLEFT", 0, -2)
+          end
+
+          -- Re-anchor SeasonLabel (section gap of -13 after last weekly element)
+          if tooltip.SeasonLabel then
+            tooltip.SeasonLabel:ClearAllPoints()
+            local lastWeekly = tooltip.WeeklyPlayed
+            if tooltip.WeeklyMostPlayedSpec and tooltip.WeeklyMostPlayedSpec:IsShown() then
+              lastWeekly = tooltip.WeeklyMostPlayedSpec
+            elseif showWeeklyWR then
+              lastWeekly = tooltip.MMRTWeeklyWinRate
+            end
+            tooltip.SeasonLabel:SetPoint("TOPLEFT", lastWeekly, "BOTTOMLEFT", 0, -13)
+          end
+
+          -- Season win rate (only when games have been played)
+          local showSeasonWR = sp and sp > 0
+          if showSeasonWR then
+            tooltip.MMRTSeasonWinRate:SetText("Win Rate: " .. mfloor((sw / sp) * 100 + 0.5) .. "%")
+            tooltip.MMRTSeasonWinRate:ClearAllPoints()
+            tooltip.MMRTSeasonWinRate:SetPoint("TOPLEFT", tooltip.SeasonPlayed, "BOTTOMLEFT", 0, -2)
+            tooltip.MMRTSeasonWinRate:Show()
+          else
+            tooltip.MMRTSeasonWinRate:Hide()
+          end
+
+          -- Re-anchor SeasonMostPlayedSpec (follows win rate or Played)
+          if tooltip.SeasonMostPlayedSpec then
+            tooltip.SeasonMostPlayedSpec:ClearAllPoints()
+            local seasonAnchor = showSeasonWR and tooltip.MMRTSeasonWinRate or tooltip.SeasonPlayed
+            tooltip.SeasonMostPlayedSpec:SetPoint("TOPLEFT", seasonAnchor, "BOTTOMLEFT", 0, -2)
+          end
+
+          -- Re-anchor ModeDescription (section gap of -13 after last season element)
+          if tooltip.ModeDescription then
+            tooltip.ModeDescription:ClearAllPoints()
+            local lastSeason = tooltip.SeasonPlayed
+            if tooltip.SeasonMostPlayedSpec and tooltip.SeasonMostPlayedSpec:IsShown() then
+              lastSeason = tooltip.SeasonMostPlayedSpec
+            elseif showSeasonWR then
+              lastSeason = tooltip.MMRTSeasonWinRate
+            end
+            tooltip.ModeDescription:SetPoint("TOPLEFT", lastSeason, "BOTTOMLEFT", 0, -13)
+          end
+
+          tooltip:Layout()
+          tooltip:Show()
+        end)
+        button._mmrt_tooltip_hooked = true
+      end
+    end
+  end)
+
+end
+
+-- Blizzard_PVPUI loads on demand — hook when it's ready
+local MMRTPvPHookFrame = CreateFrame("Frame")
+MMRTPvPHookFrame:RegisterEvent("ADDON_LOADED")
+MMRTPvPHookFrame:SetScript("OnEvent", function(self, event, addon)
+  if addon == "Blizzard_PVPUI" then
+    SetupConquestFrameHooks()
+    self:UnregisterEvent("ADDON_LOADED")
+  end
+end)
+-- Handle /reload while PvP pane was already open
+if C_AddOns and C_AddOns.IsAddOnLoaded("Blizzard_PVPUI") then
+  SetupConquestFrameHooks()
+  MMRTPvPHookFrame:UnregisterEvent("ADDON_LOADED")
+end
+
+-- Inspect PvP Frame Hooks (win rate next to Record)
+local function SetupInspectPVPHooks()
+  local mfloor = math.floor
+
+  hooksecurefunc("InspectPVPFrame_Update", function()
+    local frame = InspectPVPFrame
+    if not frame then
+      return
+    end
+
+    -- Helper: create or update a win rate FontString on a bracket row
+    local function UpdateBracketWinRate(bracketFrame, played, won)
+      if not bracketFrame.MMRTWinRate then
+        bracketFrame.MMRTWinRate = bracketFrame:CreateFontString(nil, "ARTWORK", "GameFontDisable")
+        bracketFrame.MMRTWinRate:SetPoint("LEFT", bracketFrame.Record, "RIGHT", 2, 0)
+      end
+      if played and played > 0 then
+        local pct = mfloor((won / played) * 100 + 0.5)
+        bracketFrame.MMRTWinRate:SetText("(" .. pct .. "%)")
+        bracketFrame.MMRTWinRate:Show()
+      else
+        bracketFrame.MMRTWinRate:Hide()
+      end
+    end
+
+    -- Rated BG
+    local ratedBGData = C_PaperDollInfo.GetInspectRatedBGData()
+    if ratedBGData then
+      UpdateBracketWinRate(frame.RatedBG, ratedBGData.played, ratedBGData.won)
+    end
+
+    -- Arena 2v2 and 3v3
+    local arenaFrames = { frame.Arena2v2, frame.Arena3v3 }
+    for i = 1, 2 do
+      local _, seasonPlayed, seasonWon = GetInspectArenaData(i)
+      UpdateBracketWinRate(arenaFrames[i], seasonPlayed, seasonWon)
+    end
+
+    -- Solo Shuffle (Record shows rounds)
+    local shuffleStats = C_PaperDollInfo.GetInspectRatedSoloShuffleData()
+    if shuffleStats then
+      UpdateBracketWinRate(frame.RatedSoloShuffle, shuffleStats.roundsPlayed, shuffleStats.roundsWon)
+    end
+
+    -- BG Blitz (Record shows games)
+    local blitzStats = C_PaperDollInfo.GetInspectRatedBGBlitzData()
+    if blitzStats then
+      UpdateBracketWinRate(frame.RatedBGBlitz, blitzStats.gamesPlayed, blitzStats.gamesWon)
+    end
+  end)
+end
+
+-- Blizzard_InspectUI loads on demand — hook when it's ready
+local MMRTInspectHookFrame = CreateFrame("Frame")
+MMRTInspectHookFrame:RegisterEvent("ADDON_LOADED")
+MMRTInspectHookFrame:SetScript("OnEvent", function(self, event, addon)
+  if addon == "Blizzard_InspectUI" then
+    SetupInspectPVPHooks()
+    self:UnregisterEvent("ADDON_LOADED")
+  end
+end)
+-- Handle /reload while inspect pane was already open
+if C_AddOns and C_AddOns.IsAddOnLoaded("Blizzard_InspectUI") then
+  SetupInspectPVPHooks()
+  MMRTInspectHookFrame:UnregisterEvent("ADDON_LOADED")
+end

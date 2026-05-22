@@ -567,6 +567,54 @@ NS.UpdateTable = function()
   return rows
 end
 
+-- Compute summary stats from a user-selected subset of rows (no filtering applied)
+NS.ComputeSelectionStats = function(rows)
+  local highestRating = nil
+  local highestMMR = nil
+  local wins = 0
+  local losses = 0
+
+  for _, row in ipairs(rows) do
+    local bracketNum = row[11]
+    local newRating = row[16]
+    local postMatchMMR = row[17]
+    local isWin = row[18]
+    local preRating = row[19]
+    local preMatchMMR = row[20]
+
+    for _, rating in ipairs({ preRating, newRating }) do
+      if rating and rating >= 0 then
+        if not highestRating or rating > highestRating then
+          highestRating = rating
+        end
+      end
+    end
+
+    if bracketNum == 6 or bracketNum == 8 then
+      for _, mmr in ipairs({ preMatchMMR, postMatchMMR }) do
+        if mmr and mmr >= 0 then
+          if not highestMMR or mmr > highestMMR then
+            highestMMR = mmr
+          end
+        end
+      end
+    end
+
+    if isWin == true then
+      wins = wins + 1
+    elseif isWin == false then
+      losses = losses + 1
+    end
+  end
+
+  return {
+    highestRating = highestRating,
+    highestMMR = highestMMR,
+    wins = wins,
+    losses = losses,
+  }
+end
+
 -- Compute summary stats for the header above the data table
 -- Left side (Highest Rating/MMR): bracket tab + character + region + spec (Shuffle/Blitz only)
 -- Center + Right (W-L, Streak): full NS.TableFilter

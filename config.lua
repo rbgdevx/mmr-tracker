@@ -160,6 +160,7 @@ NS.DefaultDatabase = {
   },
   global = {
     lock = false,
+    showRecordInQueue = true,
     show2v2 = false,
     show3v3 = false,
     showRBG = false,
