@@ -28,6 +28,9 @@ ehthumbs.db
 ehthumbs_vista.db
 desktop.ini
 
+# Test data
+test-savedvariables.lua
+
 # Editor / IDE
 .idea/
 *.swp
