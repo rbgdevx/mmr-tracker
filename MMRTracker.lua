@@ -77,7 +77,6 @@ do
     end
   end
   settingsBtn:SetScript("OnClick", function()
-    local AceConfigDialog = LibStub("AceConfigDialog-3.0")
     if not AceConfigDialog.OpenFrames[AddonName] then
       AceConfigDialog:Open(AddonName)
     else
@@ -86,9 +85,12 @@ do
   end)
 end
 
--- Make sure the window can be closed by pressing the escape button
-_G["MMRTRACKER_DATA_TABLE_WINDOW"] = MMRTrackerGUI.frame
-tinsert(UISpecialFrames, "MMRTRACKER_DATA_TABLE_WINDOW")
+-- Make sure the window can be closed by pressing the escape button.
+-- Handled locally (see NS.MakeEscClosable in helpers.lua) instead of
+-- UISpecialFrames so secure code never reads a tainted frame global.
+-- MMRTrackerGUI is created once at file scope and never Release()d, so the
+-- permanent HookScripts on the pooled AceGUI frame are safe.
+NS.MakeEscClosable(MMRTrackerGUI.frame)
 
 local SimpleGroup = AceGUI:Create("SimpleGroup")
 SimpleGroup:SetLayout("Fill")
@@ -108,8 +110,8 @@ local columns = {
       b = 0.15,
       a = 1.0,
     },
-    comparesort = function(_self, _rowA, _rowB, _sortByColumn)
-      return NS.SortDateColumn(_self, _rowA, _rowB, _sortByColumn)
+    comparesort = function(self, rowA, rowB, sortByColumn)
+      return NS.SortDateColumn(self, rowA, rowB, sortByColumn)
     end,
   },
   {
@@ -191,7 +193,7 @@ DataTable:RegisterEvents({
   ["OnLeave"] = function()
     return false -- delegate to default leave behavior
   end,
-  ["OnClick"] = function(rowFrame, cellFrame, data, cols, row, realrow, column, st, button, ...)
+  ["OnClick"] = function(_rowFrame, _cellFrame, _data, _cols, row, realrow, _column, st, button)
     if button == "LeftButton" then
       if not (row or realrow) then
         return false -- delegate header sort to default handler
@@ -371,15 +373,21 @@ end
 
 -- Tabs: All, 2v2, 3v3, Shuffle, Blitz, RBG
 local tabFrame = CreateFrame("Frame", "MMRTrackerTabs", MMRTrackerGUI.frame)
+-- Populate frame.Tabs so Blizzard's GetTabByIndex (SharedUIPanelTemplates.lua)
+-- uses the array and never falls back to reading _G["MMRTrackerTabsTabN"] --
+-- those tainted-global reads were the level-2 taint-log lines from
+-- PanelTemplates_SetNumTabs/SetTab below.
+tabFrame.Tabs = {}
 
 for i = 1, 6 do
   local tab = CreateFrame("Button", "MMRTrackerTabsTab" .. i, MMRTrackerGUI.frame, "CharacterFrameTabTemplate")
+  tabFrame.Tabs[i] = tab
   tab:SetID(i)
   tab:SetText(NS.TAB_LABELS[i])
   if i == 1 then
     tab:SetPoint("CENTER", MMRTrackerGUI.frame, "BOTTOMLEFT", 55, -10)
   else
-    tab:SetPoint("LEFT", _G["MMRTrackerTabsTab" .. (i - 1)], "RIGHT", -15, 0)
+    tab:SetPoint("LEFT", tabFrame.Tabs[i - 1], "RIGHT", -15, 0)
   end
   tab:SetScript("OnClick", function(self)
     local id = self:GetID()
@@ -405,7 +413,7 @@ NS.RefreshTabs = function()
   end
   NS.noBracketsVisible = not anyBracketVisible
   for i = 1, 6 do
-    local tab = _G["MMRTrackerTabsTab" .. i]
+    local tab = tabFrame.Tabs[i]
     local bracketKey = NS.TAB_BRACKETS[i] -- nil for "All" tab
     local visible
     if bracketKey == nil then
@@ -717,7 +725,6 @@ function MMRTracker:GROUP_ROSTER_UPDATE()
       MMRTrackerFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
       ShuffleFrame.eventRegistered = true
     end
-  else
   end
 end
 
@@ -737,7 +744,6 @@ function MMRTracker:ARENA_OPPONENT_UPDATE()
       MMRTrackerFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
       ShuffleFrame.eventRegistered = true
     end
-  else
   end
 end
 
@@ -758,6 +764,9 @@ function MMRTracker:PVP_MATCH_COMPLETE()
 
     local TIME = NS.GetUTCTime()
 
+    -- Insecure-callable; resets the scoreboard faction filter so GetScoreInfo
+    -- returns both teams. Not a taint vector, but it does mutate shared
+    -- scoreboard-query state Blizzard's score frame also reads.
     SetBattlefieldScoreFaction(nil)
 
     local gameInfo = {
@@ -1129,7 +1138,8 @@ end
 function MMRTracker:PLAYER_LOGIN()
   MMRTrackerFrame:UnregisterEvent("PLAYER_LOGIN")
 
-  _, NS.Timezone = NS.GetUTCTime(true)
+  local _, _timezone = NS.GetUTCTime(true)
+  NS.Timezone = _timezone
 
   local _playerGUID = UnitGUID("player")
   local _region = NS.REGION_NAME[GetActualRegion(playerGUID)]
@@ -1314,11 +1324,61 @@ local function SetupConquestFrameHooks()
   local GetPersonalRatedInfo = GetPersonalRatedInfo
   local mfloor = math.floor
 
+  -- Taint hygiene: everything we render lives on addon-owned frames created in
+  -- Interface:CreateInterface() (interface.lua) and parented to UIParent.
+  -- Blizzard frames are only ever READ (anchors, GetFrameLevel, HookScript) —
+  -- creating regions on them or writing fields into them taints them, which
+  -- can end up blocking protected actions like the rated Join button.
+  local recordTexts = {} -- [conquest button] = our FontString (lives on the overlay)
+  local hookedButtons = {} -- [conquest button] = true once OnEnter is hooked
+
+  -- The overlay/rider frames are created at PLAYER_LOGIN; on a /reload with
+  -- the PvP pane already open this setup runs at file scope before that, so
+  -- every closure looks them up lazily instead of capturing them here.
+
+  -- Couple the overlay's visibility to ConquestFrame so record texts never
+  -- float over the world after the panel closes.
+  ConquestFrame:HookScript("OnShow", function()
+    local overlay = NS.Interface.conquestOverlay
+    if overlay then
+      overlay:Show()
+    end
+  end)
+  ConquestFrame:HookScript("OnHide", function()
+    local overlay = NS.Interface.conquestOverlay
+    if overlay then
+      overlay:Hide()
+    end
+    local rider = NS.Interface.conquestRider
+    if rider then
+      rider:Hide()
+    end
+  end)
+  -- Mouse leaving a bracket button hides the tooltip — the rider follows it
+  ConquestTooltip:HookScript("OnHide", function()
+    local rider = NS.Interface.conquestRider
+    if rider then
+      rider:Hide()
+    end
+  end)
+
   -- Hook ConquestFrame_Update: add "cr" suffix and win rate to bracket buttons
   hooksecurefunc("ConquestFrame_Update", function(self)
     if not CONQUEST_BUTTONS then
       return
     end
+
+    local overlay = NS.Interface.conquestOverlay
+    if not overlay then
+      return
+    end
+
+    -- Overlay strata is fixed at HIGH (set in interface.lua) so the post-Show
+    -- PVEFrame:Raise() can't bury our records under the button artwork; only
+    -- toggle visibility here. IsVisible, not IsShown: closing PVEFrame leaves
+    -- ConquestFrame's own shown flag true, and late async events
+    -- (PVP_TYPES_ENABLED, GET_ITEM_INFO_RECEIVED) re-run this hook while closed.
+    overlay:SetShown(ConquestFrame:IsVisible())
 
     for i = 1, 5 do
       local button = CONQUEST_BUTTONS[i]
@@ -1342,108 +1402,85 @@ local function SetupConquestFrameHooks()
       --   button.MMRTWinRate:Hide()
       -- end
 
-      -- Season record to the right of the rating number
-      if not button.MMRTRecord then
-        button.MMRTRecord = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall2")
-        button.MMRTRecord:SetPoint("LEFT", button.CurrentRating, "RIGHT", 4, 0.3)
+      -- Season record to the right of the rating number. The FontString lives
+      -- on OUR overlay and is only anchored to the button's rating text —
+      -- anchoring reads the Blizzard region, it never writes to it.
+      local record = recordTexts[button]
+      if not record then
+        record = overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall2")
+        record:SetPoint("LEFT", button.CurrentRating, "RIGHT", 4, 0.3)
+        recordTexts[button] = record
       end
       if NS.db.global.showRecordInQueue then
         local wins = seasonWon or 0
         local losses = (seasonPlayed or 0) - wins
         if wins == 0 and losses == 0 then
-          button.MMRTRecord:Hide()
+          record:Hide()
         else
-          button.MMRTRecord:SetText("(" .. wins .. "-" .. losses .. ")")
-          button.MMRTRecord:Show()
+          record:SetText("(" .. wins .. "-" .. losses .. ")")
+          record:Show()
         end
       else
-        button.MMRTRecord:Hide()
+        record:Hide()
       end
 
-      -- Hook tooltip on first update to insert win rate into the anchor chain
-      if not button._mmrt_tooltip_hooked then
+      -- Hook tooltip on first update to show win rates in the rider panel.
+      -- Dedup lives in our own table — writing a flag onto the Blizzard
+      -- button would taint it, and HookScript chains can never be removed.
+      if not hookedButtons[button] then
         button:HookScript("OnEnter", function(btn)
           local tooltip = ConquestTooltip
-          if not tooltip or not btn.bracketIndex then
+          local rider = NS.Interface.conquestRider
+          if not rider then
+            return
+          end
+          if not tooltip or not btn.bracketIndex or not tooltip:IsShown() then
+            rider:Hide()
             return
           end
 
           local _, _, _, sp, sw, wp, ww = GetPersonalRatedInfo(btn.bracketIndex)
 
-          -- Create win rate FontStrings once (GameFontHighlight matches the stat lines)
-          if not tooltip.MMRTWeeklyWinRate then
-            tooltip.MMRTWeeklyWinRate = tooltip:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-            tooltip.MMRTWeeklyWinRate:SetJustifyH("LEFT")
+          -- Win rates render in a "rider" panel attached below the tooltip (a
+          -- second tooltip section). The old approach injected FontStrings
+          -- into ConquestTooltip and re-anchored its own regions, which
+          -- tainted the tooltip's secure layout.
+          local lines = {}
+          if sp and sp > 0 then
+            local wins = sw or 0
+            lines[#lines + 1] = "Season Win-Loss: " .. wins .. "-" .. (sp - wins)
           end
-          if not tooltip.MMRTSeasonWinRate then
-            tooltip.MMRTSeasonWinRate = tooltip:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-            tooltip.MMRTSeasonWinRate:SetJustifyH("LEFT")
+          if wp and wp > 0 then
+            lines[#lines + 1] = "Weekly Win Rate: " .. mfloor((ww / wp) * 100 + 0.5) .. "%"
           end
-
-          -- Weekly win rate (only when games have been played)
-          local showWeeklyWR = wp and wp > 0
-          if showWeeklyWR then
-            tooltip.MMRTWeeklyWinRate:SetText("Win Rate: " .. mfloor((ww / wp) * 100 + 0.5) .. "%")
-            tooltip.MMRTWeeklyWinRate:ClearAllPoints()
-            tooltip.MMRTWeeklyWinRate:SetPoint("TOPLEFT", tooltip.WeeklyPlayed, "BOTTOMLEFT", 0, -2)
-            tooltip.MMRTWeeklyWinRate:Show()
-          else
-            tooltip.MMRTWeeklyWinRate:Hide()
+          if sp and sp > 0 then
+            lines[#lines + 1] = "Season Win Rate: " .. mfloor((sw / sp) * 100 + 0.5) .. "%"
           end
-
-          -- Re-anchor WeeklyMostPlayedSpec (follows win rate or Played)
-          if tooltip.WeeklyMostPlayedSpec then
-            tooltip.WeeklyMostPlayedSpec:ClearAllPoints()
-            local weeklyAnchor = showWeeklyWR and tooltip.MMRTWeeklyWinRate or tooltip.WeeklyPlayed
-            tooltip.WeeklyMostPlayedSpec:SetPoint("TOPLEFT", weeklyAnchor, "BOTTOMLEFT", 0, -2)
+          if #lines == 0 then
+            rider:Hide()
+            return
           end
 
-          -- Re-anchor SeasonLabel (section gap of -13 after last weekly element)
-          if tooltip.SeasonLabel then
-            tooltip.SeasonLabel:ClearAllPoints()
-            local lastWeekly = tooltip.WeeklyPlayed
-            if tooltip.WeeklyMostPlayedSpec and tooltip.WeeklyMostPlayedSpec:IsShown() then
-              lastWeekly = tooltip.WeeklyMostPlayedSpec
-            elseif showWeeklyWR then
-              lastWeekly = tooltip.MMRTWeeklyWinRate
+          for j = 1, #rider.lines do
+            local fs = rider.lines[j]
+            if lines[j] then
+              fs:SetText(lines[j])
+              fs:Show()
+            else
+              fs:Hide()
             end
-            tooltip.SeasonLabel:SetPoint("TOPLEFT", lastWeekly, "BOTTOMLEFT", 0, -13)
           end
 
-          -- Season win rate (only when games have been played)
-          local showSeasonWR = sp and sp > 0
-          if showSeasonWR then
-            tooltip.MMRTSeasonWinRate:SetText("Win Rate: " .. mfloor((sw / sp) * 100 + 0.5) .. "%")
-            tooltip.MMRTSeasonWinRate:ClearAllPoints()
-            tooltip.MMRTSeasonWinRate:SetPoint("TOPLEFT", tooltip.SeasonPlayed, "BOTTOMLEFT", 0, -2)
-            tooltip.MMRTSeasonWinRate:Show()
-          else
-            tooltip.MMRTSeasonWinRate:Hide()
-          end
-
-          -- Re-anchor SeasonMostPlayedSpec (follows win rate or Played)
-          if tooltip.SeasonMostPlayedSpec then
-            tooltip.SeasonMostPlayedSpec:ClearAllPoints()
-            local seasonAnchor = showSeasonWR and tooltip.MMRTSeasonWinRate or tooltip.SeasonPlayed
-            tooltip.SeasonMostPlayedSpec:SetPoint("TOPLEFT", seasonAnchor, "BOTTOMLEFT", 0, -2)
-          end
-
-          -- Re-anchor ModeDescription (section gap of -13 after last season element)
-          if tooltip.ModeDescription then
-            tooltip.ModeDescription:ClearAllPoints()
-            local lastSeason = tooltip.SeasonPlayed
-            if tooltip.SeasonMostPlayedSpec and tooltip.SeasonMostPlayedSpec:IsShown() then
-              lastSeason = tooltip.SeasonMostPlayedSpec
-            elseif showSeasonWR then
-              lastSeason = tooltip.MMRTSeasonWinRate
-            end
-            tooltip.ModeDescription:SetPoint("TOPLEFT", lastSeason, "BOTTOMLEFT", 0, -13)
-          end
-
-          tooltip:Layout()
-          tooltip:Show()
+          -- Width tracks the tooltip exactly via two anchors (anchoring only
+          -- READS the Blizzard frame). Never reposition or resize the tooltip
+          -- itself — Layout()/Show() on it from addon code taints it.
+          rider:ClearAllPoints()
+          rider:SetPoint("TOPLEFT", tooltip, "BOTTOMLEFT", 0, 0)
+          rider:SetPoint("TOPRIGHT", tooltip, "BOTTOMRIGHT", 0, 0)
+          rider:SetHeight(12 + #lines * 14 + (#lines - 1) * 2 + 12)
+          rider:Show()
         end)
-        button._mmrt_tooltip_hooked = true
+        hookedButtons[button] = true
       end
     end
   end)
@@ -1453,7 +1490,7 @@ end
 -- Blizzard_PVPUI loads on demand — hook when it's ready
 local MMRTPvPHookFrame = CreateFrame("Frame")
 MMRTPvPHookFrame:RegisterEvent("ADDON_LOADED")
-MMRTPvPHookFrame:SetScript("OnEvent", function(self, event, addon)
+MMRTPvPHookFrame:SetScript("OnEvent", function(self, _event, addon)
   if addon == "Blizzard_PVPUI" then
     SetupConquestFrameHooks()
     self:UnregisterEvent("ADDON_LOADED")
@@ -1469,24 +1506,60 @@ end
 local function SetupInspectPVPHooks()
   local mfloor = math.floor
 
+  -- Taint hygiene: same pattern as the conquest hooks — our FontStrings live
+  -- on an addon-owned overlay (created in Interface:CreateInterface) and are
+  -- only anchored to Blizzard's bracket rows, never created on them.
+  local winRateTexts = {} -- [bracket row frame] = our FontString
+
+  InspectPVPFrame:HookScript("OnShow", function()
+    local overlay = NS.Interface.inspectOverlay
+    if overlay then
+      overlay:Show()
+    end
+  end)
+  InspectPVPFrame:HookScript("OnHide", function()
+    local overlay = NS.Interface.inspectOverlay
+    if overlay then
+      overlay:Hide()
+    end
+  end)
+
   hooksecurefunc("InspectPVPFrame_Update", function()
     local frame = InspectPVPFrame
     if not frame then
       return
     end
 
-    -- Helper: create or update a win rate FontString on a bracket row
+    local overlay = NS.Interface.inspectOverlay
+    if not overlay then
+      return
+    end
+
+    -- Strata is fixed at HIGH (interface.lua); only toggle visibility here.
+    -- IsVisible, not IsShown: closing InspectFrame leaves InspectPVPFrame's
+    -- own shown flag true, and INSPECT_HONOR_UPDATE (never unregistered) can
+    -- re-run this hook after the window is closed.
+    overlay:SetShown(frame:IsVisible())
+
+    -- Helper: create or update a win rate FontString anchored to a bracket row
     local function UpdateBracketWinRate(bracketFrame, played, won)
-      if not bracketFrame.MMRTWinRate then
-        bracketFrame.MMRTWinRate = bracketFrame:CreateFontString(nil, "ARTWORK", "GameFontDisable")
-        bracketFrame.MMRTWinRate:SetPoint("LEFT", bracketFrame.Record, "RIGHT", 2, 0)
+      local winRate = winRateTexts[bracketFrame]
+      if not winRate then
+        winRate = overlay:CreateFontString(nil, "ARTWORK", "GameFontDisable")
+        winRate:SetPoint("LEFT", bracketFrame.Record, "RIGHT", 2, 0)
+        winRateTexts[bracketFrame] = winRate
       end
+      -- Data-only test, NOT bracketFrame:IsVisible(). InspectPVPFrame_Update
+      -- fires on async INSPECT_HONOR_UPDATE while the rows aren't visible yet,
+      -- so an IsVisible() test here would hide the percent permanently (no
+      -- later re-run corrects it). Overlay visibility is already coupled to
+      -- frame:IsVisible() above; rows with played==0 stay hidden anyway.
       if played and played > 0 then
         local pct = mfloor((won / played) * 100 + 0.5)
-        bracketFrame.MMRTWinRate:SetText("(" .. pct .. "%)")
-        bracketFrame.MMRTWinRate:Show()
+        winRate:SetText("(" .. pct .. "%)")
+        winRate:Show()
       else
-        bracketFrame.MMRTWinRate:Hide()
+        winRate:Hide()
       end
     end
 
@@ -1520,7 +1593,7 @@ end
 -- Blizzard_InspectUI loads on demand — hook when it's ready
 local MMRTInspectHookFrame = CreateFrame("Frame")
 MMRTInspectHookFrame:RegisterEvent("ADDON_LOADED")
-MMRTInspectHookFrame:SetScript("OnEvent", function(self, event, addon)
+MMRTInspectHookFrame:SetScript("OnEvent", function(self, _event, addon)
   if addon == "Blizzard_InspectUI" then
     SetupInspectPVPHooks()
     self:UnregisterEvent("ADDON_LOADED")

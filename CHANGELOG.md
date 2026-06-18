@@ -1,5 +1,11 @@
 # MMR Tracker
 
+## [v1.4.13](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.13) (2026-06-17)
+
+- Fixing taint
+- Adding all tabs back in by default to the table
+- Lua cleanup
+
 ## [v1.4.12](https://github.com/rbgdevx/mmr-tracker/releases/tag/v1.4.12) (2026-05-21)
 
 - Adding Win-Loss to pvp queue window buttons next to each brackets cr

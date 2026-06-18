@@ -151,69 +151,69 @@ NS.AceConfig = {
           order = 2,
           width = "full",
         },
-        show2v2 = {
+        enable2v2 = {
           name = "2v2",
           type = "toggle",
           width = "full",
           order = 3,
           set = function(_, val)
-            NS.db.table.show2v2 = val
+            NS.db.table.enable2v2 = val
             NS.OnDbChanged()
           end,
           get = function(_)
-            return NS.db.table.show2v2
+            return NS.db.table.enable2v2
           end,
         },
-        show3v3 = {
+        enable3v3 = {
           name = "3v3",
           type = "toggle",
           width = "full",
           order = 4,
           set = function(_, val)
-            NS.db.table.show3v3 = val
+            NS.db.table.enable3v3 = val
             NS.OnDbChanged()
           end,
           get = function(_)
-            return NS.db.table.show3v3
+            return NS.db.table.enable3v3
           end,
         },
-        showRBG = {
+        enableRBG = {
           name = "RBG",
           type = "toggle",
           width = "full",
           order = 5,
           set = function(_, val)
-            NS.db.table.showRBG = val
+            NS.db.table.enableRBG = val
             NS.OnDbChanged()
           end,
           get = function(_)
-            return NS.db.table.showRBG
+            return NS.db.table.enableRBG
           end,
         },
-        showShuffle = {
+        enableShuffle = {
           name = "Shuffle",
           type = "toggle",
           width = "full",
           order = 6,
           set = function(_, val)
-            NS.db.table.showShuffle = val
+            NS.db.table.enableShuffle = val
             NS.OnDbChanged()
           end,
           get = function(_)
-            return NS.db.table.showShuffle
+            return NS.db.table.enableShuffle
           end,
         },
-        showBlitz = {
+        enableBlitz = {
           name = "Blitz",
           type = "toggle",
           width = "full",
           order = 7,
           set = function(_, val)
-            NS.db.table.showBlitz = val
+            NS.db.table.enableBlitz = val
             NS.OnDbChanged()
           end,
           get = function(_)
-            return NS.db.table.showBlitz
+            return NS.db.table.enableBlitz
           end,
         },
       },

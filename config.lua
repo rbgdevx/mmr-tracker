@@ -152,11 +152,11 @@ end
 NS.DefaultDatabase = {
   migrated = false,
   table = {
-    show2v2 = false,
-    show3v3 = false,
-    showRBG = false,
-    showShuffle = true,
-    showBlitz = true,
+    enable2v2 = true,
+    enable3v3 = true,
+    enableRBG = true,
+    enableShuffle = true,
+    enableBlitz = true,
   },
   global = {
     lock = false,

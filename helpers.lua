@@ -24,19 +24,19 @@ local ScrollingTable = LibStub("ScrollingTable")
 NS.IsBracketVisible = function(bracketNum)
   local t = NS.db.table
   if bracketNum == 0 then
-    return t.show2v2
+    return t.enable2v2
   end
   if bracketNum == 1 then
-    return t.show3v3
+    return t.enable3v3
   end
   if bracketNum == 3 then
-    return t.showRBG
+    return t.enableRBG
   end
   if bracketNum == 6 then
-    return t.showShuffle
+    return t.enableShuffle
   end
   if bracketNum == 8 then
-    return t.showBlitz
+    return t.enableBlitz
   end
   return true
 end
@@ -50,11 +50,11 @@ NS.UpdateFont = function(frame)
   frame:SetFont(SharedMedia:Fetch("font", NS.db.global.fontFamily), NS.db.global.fontSize, "OUTLINE")
 end
 
-NS.SetTextFrameSize = function(frame, _lines)
+NS.SetTextFrameSize = function(frame, lines)
   local maxWidth = 1
   local totalHeight = 1
 
-  for _, textFrame in pairs(_lines) do
+  for _, textFrame in pairs(lines) do
     if textFrame and textFrame:GetAlpha() > 0 then
       local textWidth = textFrame:GetStringWidth() -- Get the width of the text
       local textHeight = textFrame:GetStringHeight() -- Get the height of the text
@@ -74,7 +74,7 @@ NS.SetTextFrameSize = function(frame, _lines)
   frame.textFrame:SetHeight(totalHeight)
 
   -- Equalize line widths so JustifyH (LEFT/CENTER/RIGHT) takes effect
-  for _, textFrame in pairs(_lines) do
+  for _, textFrame in pairs(lines) do
     if textFrame and textFrame:GetAlpha() > 0 then
       textFrame:SetWidth(maxWidth)
     end
@@ -86,7 +86,7 @@ NS.GetSpecIcon = function(classToken, specName)
   return classData and classData[specName] and classData[specName].specIcon or nil
 end
 
-NS.DateFormat = function(timeRaw, timeZone, region)
+NS.DateFormat = function(timeRaw, _timeZone, region)
   if region == "US" then
     return date("%I:%M %p %m/%d/%y", timeRaw)
   else
@@ -235,21 +235,21 @@ NS.sortByDate = function(data)
   end)
 end
 
-NS.SortDateColumn = function(_data, _rowA, _rowB, _sortByColumn)
-  local column = _data.cols[_sortByColumn]
+NS.SortDateColumn = function(data, rowA, rowB, sortByColumn)
+  local column = data.cols[sortByColumn]
   local direction = column.sort or column.defaultsort or ScrollingTable.SORT_ASC
 
   -- Column 1 (display date) maps to column 10 (raw UTC epoch) for numeric sorting
-  local epochColumn = _sortByColumn == 1 and 10 or _sortByColumn
-  local rowA = _data.data[_rowA][epochColumn]
-  local rowB = _data.data[_rowB][epochColumn]
+  local epochColumn = sortByColumn == 1 and 10 or sortByColumn
+  local valA = data.data[rowA][epochColumn]
+  local valB = data.data[rowB][epochColumn]
 
-  if rowA == rowB then
+  if valA == valB then
     return false
   elseif ScrollingTable.SORT_DSC == direction then
-    return rowA > rowB
+    return valA > valB
   else
-    return rowA < rowB
+    return valA < valB
   end
 end
 
@@ -977,4 +977,61 @@ NS.CleanupDB = function(src, dst)
     end
   end
   return dst
+end
+
+-- Replacement for UISpecialFrames. Inserting addon frames into UISpecialFrames
+-- makes Blizzard's secure CloseWindows()/CloseSpecialWindows() path read our
+-- tainted frame global on every Escape press (logged at taintLog 2+), so ESC is
+-- handled locally instead. SetPropagateKeyboardInput is restricted for insecure
+-- code while in combat (since 10.1.5), so keyboard input is only enabled while
+-- the frame is shown AND out of combat, and the frame auto-hides when combat
+-- starts. Edge case: a frame opened DURING combat keeps keyboard disabled, so
+-- ESC opens the game menu until combat ends.
+local escWatcher = CreateFrame("Frame")
+escWatcher.frames = {}
+escWatcher:RegisterEvent("PLAYER_REGEN_DISABLED")
+escWatcher:RegisterEvent("PLAYER_REGEN_ENABLED")
+escWatcher:SetScript("OnEvent", function(self, event)
+  for frame in pairs(self.frames) do
+    if event == "PLAYER_REGEN_DISABLED" then
+      frame:EnableKeyboard(false) -- never handle keys in combat
+      if frame:IsShown() then
+        frame:Hide()
+      end
+    elseif frame:IsShown() then
+      frame:EnableKeyboard(true) -- opened mid-combat, combat just ended
+    end
+  end
+end)
+
+NS.MakeEscClosable = function(frame)
+  escWatcher.frames[frame] = true
+  frame:EnableKeyboard(false) -- only enabled while shown + out of combat
+  -- SetScript is safe for OnKeyDown (nothing else owns it); OnShow/OnHide must
+  -- be HookScript because the AceGUI Frame widget owns those handlers.
+  frame:SetScript("OnKeyDown", function(self, key)
+    if InCombatLockdown() then
+      return -- restricted API; guards the one-frame race before REGEN_DISABLED
+    end
+    if key == "ESCAPE" then
+      self:SetPropagateKeyboardInput(false) -- consume: don't also open game menu
+      self:Hide()
+    else
+      self:SetPropagateKeyboardInput(true) -- movement/typing passes through
+    end
+  end)
+  frame:HookScript("OnShow", function(self)
+    if InCombatLockdown() then
+      -- Don't allow these windows on screen during combat. Hidden in the same
+      -- frame as Show() so there's no visible flash, and keyboard never gets
+      -- enabled in combat. Opens normally once combat ends.
+      self:Hide()
+      print("|cff33ff99MMRTracker|r: can't open this window during combat.")
+      return
+    end
+    self:EnableKeyboard(true)
+  end)
+  frame:HookScript("OnHide", function(self)
+    self:EnableKeyboard(false)
+  end)
 end

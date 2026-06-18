@@ -56,7 +56,7 @@ function Interface:MakeMoveable(frame)
       -- WoW resets the anchor after StopMovingOrSizing (typically to TOPLEFT).
       -- Re-establish the grow-direction anchor using GetRect so the saved
       -- position always matches, preventing jumps on subsequent OnDbChanged calls.
-      local left, bottom, width, height = f:GetRect()
+      local left, bottom, _, height = f:GetRect()
       if left and height and height > 0 then
         local growUp = NS.db and NS.db.global.growDirection == "UP"
         f:ClearAllPoints()
@@ -120,19 +120,66 @@ function Interface:CreateInterface()
     -- border:SetColorTexture(0, 0, 0, 1) -- Black border with full opacity
     Interface.textFrame = TextFrame
   end
+
+  -- Addon-owned hosts for the PvP UI enhancements. Everything we render on
+  -- Blizzard's ConquestFrame / InspectPVPFrame lives on these frames (parented
+  -- to UIParent) and is only ANCHORED to Blizzard regions — creating regions on
+  -- or writing fields into Blizzard frames taints them, and that taint can
+  -- block protected actions (e.g. the rated Join button). The Blizzard frames
+  -- are load-on-demand, so anchors/hooks are wired later in
+  -- SetupConquestFrameHooks / SetupInspectPVPHooks (MMRTracker.lua).
+  if not Interface.conquestOverlay then
+    -- HIGH strata (fixed at creation), NOT synced to ConquestFrame. When the
+    -- Rated tab opens, PVPQueueFrame_ShowFrame runs ConquestFrame_Update (our
+    -- hook) BEFORE UpdateUIPanelPositions calls PVEFrame:Raise(), which lifts
+    -- PVEFrame/ConquestFrame and its buttons to the top of MEDIUM strata via
+    -- useParentLevel. A MEDIUM overlay would be left buried beneath the button
+    -- artwork (records invisible). HIGH sits entirely above MEDIUM, immune to
+    -- that per-update level race — same reason the TOOLTIP-strata rider works.
+    local ConquestOverlay = CreateFrame("Frame", nil, UIParent)
+    ConquestOverlay:SetFrameStrata("HIGH")
+    ConquestOverlay:Hide()
+    Interface.conquestOverlay = ConquestOverlay
+
+    local InspectOverlay = CreateFrame("Frame", nil, UIParent)
+    InspectOverlay:SetFrameStrata("HIGH")
+    InspectOverlay:Hide()
+    Interface.inspectOverlay = InspectOverlay
+
+    -- Win-rate "rider" panel shown attached below ConquestTooltip — a second
+    -- tooltip section, never parented into the tooltip (its secure
+    -- ResizeLayoutFrame:Layout() iterates children; a tainted child would
+    -- taint the secure layout pass).
+    local Rider = CreateFrame("Frame", nil, UIParent, "TooltipBackdropTemplate")
+    Rider:SetFrameStrata("TOOLTIP")
+    Rider:Hide()
+    -- Up to 3 stat lines: season win-loss, weekly win rate, season win rate
+    Rider.lines = {}
+    for i = 1, 3 do
+      local line = Rider:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+      if i == 1 then
+        line:SetPoint("TOPLEFT", 15, -12) -- matches the tooltip's 15px content inset
+      else
+        line:SetPoint("TOPLEFT", Rider.lines[i - 1], "BOTTOMLEFT", 0, -2)
+      end
+      line:SetJustifyH("LEFT")
+      Rider.lines[i] = line
+    end
+    Interface.conquestRider = Rider
+  end
 end
 
 -- New UpdateAnchors function to dynamically reposition visible text
 -- Uses two-point anchoring (LEFT+RIGHT) so each FontString spans the full
 -- parent width, which allows SetJustifyH (LEFT/CENTER/RIGHT) to take effect.
-function Interface:UpdateAnchors(frame, _lines)
+function Interface:UpdateAnchors(frame, lineSet)
   local anchor = frame.textFrame
   local firstVisible = nil
   local growUp = NS.db and NS.db.global.growDirection == "UP"
   local order = growUp and LINE_ORDER_UP or LINE_ORDER_DOWN
 
   for _, key in ipairs(order) do
-    local line = _lines[key]
+    local line = lineSet[key]
     if line and line:GetAlpha() > 0 then
       line:ClearAllPoints()
 
