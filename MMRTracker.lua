@@ -180,8 +180,14 @@ local columns = {
   },
 }
 
-local DataTable =
-  ScrollingTable:CreateST(columns, 22, 20, { ["r"] = 0.3, ["g"] = 0.6, ["b"] = 1.0, ["a"] = 0.4 }, SimpleGroup.frame, true)
+local DataTable = ScrollingTable:CreateST(
+  columns,
+  22,
+  20,
+  { ["r"] = 0.3, ["g"] = 0.6, ["b"] = 1.0, ["a"] = 0.4 },
+  SimpleGroup.frame,
+  true
+)
 DataTable:EnableSelection(true)
 NS.DataTable = DataTable
 
@@ -920,7 +926,13 @@ function MMRTracker:PVP_MATCH_COMPLETE()
         MMRTrackerFrame.sessionGameCount = MMRTrackerFrame.sessionGameCount + 1
         local count = MMRTrackerFrame.sessionGameCount
         local plural = count == 1 and "game" or "games"
-        print("|cFF00CCFF[MMRTracker]|r Game recorded! Type |cFFFFFF00/reload|r to save " .. count .. " unsaved " .. plural .. ".")
+        print(
+          "|cFF00CCFF[MMRTracker]|r Game recorded! Type |cFFFFFF00/reload|r to save "
+            .. count
+            .. " unsaved "
+            .. plural
+            .. "."
+        )
 
         local soloLabel = PVP_RATING
         local preMatchValue = gameInfo.rating
@@ -1131,7 +1143,13 @@ function MMRTracker:PLAYER_ENTERING_WORLD()
   if MMRTrackerFrame.sessionGameCount > 0 then
     local count = MMRTrackerFrame.sessionGameCount
     local plural = count == 1 and "game" or "games"
-    print("|cFF00CCFF[MMRTracker]|r You have " .. count .. " unsaved " .. plural .. ". Type |cFFFFFF00/reload|r to prevent data loss on disconnect.")
+    print(
+      "|cFF00CCFF[MMRTracker]|r You have "
+        .. count
+        .. " unsaved "
+        .. plural
+        .. ". Type |cFFFFFF00/reload|r to prevent data loss on disconnect."
+    )
   end
 end
 
@@ -1484,7 +1502,6 @@ local function SetupConquestFrameHooks()
       end
     end
   end)
-
 end
 
 -- Blizzard_PVPUI loads on demand — hook when it's ready
